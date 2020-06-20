@@ -19,7 +19,7 @@ async function login(username, password) {
     });
 }
 
-module.exports.sample = async function getSampleTypes(){
+async function getSampleTypes(){
   await login();
 
   axios.get("https://us.elabjournal.com/api/v1/sampleTypes")
@@ -35,5 +35,26 @@ module.exports.sample = async function getSampleTypes(){
       // always executed
     });
 }
+
+module.exports.sample = async function makeSample(){
+  await login();
+
+  axios
+  .post("https://us.elabjournal.com/api/v1/samples?autoCreateMetaDefaults=true", {
+      sampleTypeID: 33369,
+      name: 'dany-test-api-sample'
+    })
+    .then((res) => {
+      console.log(`statusCode: ${res.status}`);
+      console.log(res.data);
+      axios.defaults.headers.common['Authorization'] = res.data.token;
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+
+};
+
+
 
 
