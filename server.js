@@ -33,6 +33,7 @@ module.exports.login = function login(username, password){
 
     response.on('end', function () {
       console.log('STATUS: ' + response.statusCode);
+      console.log(response);
       console.log(str);
     });
   };
@@ -52,7 +53,7 @@ const request = require('request');
 
 module.exports.login2 = function login2(username, password){
   username = 'danyfu@bu.edu';
-  password = 'foobar';
+  password = 'wrong';
 
   request.post('https://www.elabinventory.com/api/v1/auth/user', {
     json: {
@@ -67,5 +68,26 @@ module.exports.login2 = function login2(username, password){
     console.log(`statusCode: ${res.statusCode}`);
     console.log(body)
   });
+
+};
+
+
+
+const axios = require('axios').default;
+
+module.exports.login3 = function login3(username, password){
+  username = 'danyfu@bu.edu';
+  password = 'wrong';
+
+  axios.post('https://www.elabinventory.com/api/v1/auth/user', {
+    'username': username,
+    'password': password
+  })
+    .then((res) => {
+      console.log(`statusCode: ${res.statusCode}`);
+    })
+    .catch((error) => {
+      console.error(error)
+    });
 
 };

@@ -2,9 +2,11 @@
   "scripts": {
     "start": "node server.js",
     "http": "node -e 'require(\"./server\").login()'",
-    "request": "node -e 'require(\"./server\").login2()'"
+    "request": "node -e 'require(\"./server\").login2()'",
+    "axios": "node -e 'require(\"./server\").login3()'"
   },
   "dependencies": {
+    "axios": "^0.19.2",
     "fast-csv": "4.3.0",
     "follow-redirects": "^1.12.1",
     "request": "^2.88.2"
