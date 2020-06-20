@@ -1,0 +1,12 @@
+{
+  "scripts": {
+    "start": "node server.js",
+    "http": "node -e 'require(\"./server\").login()'",
+    "request": "node -e 'require(\"./server\").login2()'"
+  },
+  "dependencies": {
+    "fast-csv": "4.3.0",
+    "follow-redirects": "^1.12.1",
+    "request": "^2.88.2"
+  }
+}
