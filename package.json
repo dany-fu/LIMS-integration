@@ -1,9 +1,7 @@
 {
   "scripts": {
     "start": "node server.js",
-    "http": "node -e 'require(\"./server\").login()'",
-    "request": "node -e 'require(\"./server\").login2()'",
-    "axios": "node -e 'require(\"./server\").login3()'"
+    "sample": "node -e 'require(\"./server\").sample()'"
   },
   "dependencies": {
     "axios": "^0.19.2",
