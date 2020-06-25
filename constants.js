@@ -22,15 +22,23 @@ const META = {
   QPCR_PLATE_BC: {KEY: "qPCR Plate Barcode", TYPE: "TEXT"},
   QPCR_PLATE_WELL_NUM: {KEY: "qPCR Plate Well Location", TYPE: "TEXT"},
   STATUS: {KEY: "Sample Process Status", TYPE: "COMBO"},
-  RESULT: {KEY: "COVID-19 Test Result", TYPE: "COMBO"}
+  RESULT: {KEY: "COVID-19 Test Result", TYPE: "COMBO"},
+  CT_N1: {KEY: "CT Value (N1)", TYPE: "NUMERIC"},
+  CT_N2: {KEY: "CT Value (N2)", TYPE: "NUMERIC"},
+  CT_RP: {KEY: "CT Value (N2)", TYPE: "NUMERIC"}
 };
 
 const STATUS_VAL = {
   SAMPLE_PREP_DONE: "Sample Transferred To 96-Well Plate",
   RNA_DONE: "RNA Extracted",
   QPCR_PREP_DONE: "qPCR Reactions Prepared",
-  QPCR_DONE: "qPCR Run",
-  ALL_DONE: "Completed"
+  QPCR_DONE: "qPCR Run"
+};
+
+const TEST_RESULT ={
+  POSITIVE: "Positive",
+  NEGATIVE: "Negative",
+  RETEST: "Retest Required (in lab only)"
 };
 
 const ORIGIN_VAL = {
@@ -49,5 +57,6 @@ module.exports = {
   ENDPOINTS: ENDPOINTS,
   META: META,
   STATUS_VAL: STATUS_VAL,
+  TEST_RESULT: TEST_RESULT,
   ORIGIN_VAL: ORIGIN_VAL
 };

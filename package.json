@@ -4,7 +4,7 @@
     "login": "node -e 'require(\"./server\").login'",
     "sample": "node -e 'require(\"./server\").getPatientSamples'",
     "batch-sample": "node -e 'require(\"./server\").makeBatchSamples'",
-    "parse": "node server.js --file='example-hamilton-logs/test.csv' --origin='QPCR_PRE'"
+    "parse": "node server.js --file='example-hamilton-logs/test.csv'"
   },
   "dependencies": {
     "axios": "^0.19.2",
