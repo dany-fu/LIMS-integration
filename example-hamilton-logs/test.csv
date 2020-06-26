@@ -1,0 +1,13 @@
+Index,Protocol,Sample Tube Barcode,Input Barcode,Input Well Number,Output Barcode,Output Well Number,Date/Time,UserName
+385,QPCR_PREP,9999-9999-9999-9999,Plate_Samples_1,A1,Plate_qPCR,A1,6/22/20 10:13,dpmci
+386,QPCR_PREP,9999-9999-9999-10000,Plate_Samples_2,A1,Plate_qPCR,B1,6/22/20 10:13,dpmci
+387,QPCR_PREP,9999-9999-9999-10001,Plate_Samples_1,B1,Plate_qPCR,C1,6/22/20 10:13,dpmci
+388,QPCR_PREP,9999-9999-9999-10002,Plate_Samples_2,B1,Plate_qPCR,D1,6/22/20 10:13,dpmci
+389,QPCR_PREP,9999-9999-9999-10003,Plate_Samples_1,C1,Plate_qPCR,E1,6/22/20 10:13,dpmci
+390,QPCR_PREP,9999-9999-9999-10004,Plate_Samples_2,C1,Plate_qPCR,F1,6/22/20 10:13,dpmci
+391,QPCR_PREP,9999-9999-9999-10005,Plate_Samples_1,D1,Plate_qPCR,G1,6/22/20 10:13,dpmci
+392,QPCR_PREP,9999-9999-9999-10006,Plate_Samples_2,D1,Plate_qPCR,H1,6/22/20 10:13,dpmci
+393,QPCR_PREP,9999-9999-9999-10007,Plate_Samples_1,E1,Plate_qPCR,I1,6/22/20 10:13,dpmci
+394,QPCR_PREP,9999-9999-9999-10008,Plate_Samples_2,E1,Plate_qPCR,J1,6/22/20 10:13,dpmci
+395,QPCR_PREP,9999-9999-9999-10009,Plate_Samples_1,F1,Plate_qPCR,K1,6/22/20 10:13,dpmci
+396,QPCR_PREP,9999-9999-9999-10010,Plate_Samples_2,F1,Plate_qPCR,L1,6/22/20 10:13,dpmci
