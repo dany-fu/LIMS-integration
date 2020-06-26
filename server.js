@@ -141,7 +141,11 @@ async function getPatientSample(barcode){
   return axios.get(`${constants.ENDPOINTS.GET_PATIENT_SAMPLE}&name=${barcode}`)
     .then((res) => {
       console.log(`statusCode: ${res.status}`);
-      if(res.status === 200 && res.data.data.length > 0){
+      if(res.status === 200 && res.data.data.length !== 0){
+        if(res.data.data.length > 1){
+          console.log(`More than one sample found with name ${barcode}`);
+          return null;
+        }
         return res.data.data[0].sampleID;
       }
       return null;
