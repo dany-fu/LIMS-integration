@@ -1,3 +1,5 @@
+// Author: Dany Fu (danyfu@bu.edu)
+
 const { v4: uuidv4 } = require("uuid");
 const axios = require("axios").default;
 const csv = require("fast-csv");
