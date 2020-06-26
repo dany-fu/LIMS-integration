@@ -4,7 +4,7 @@
     "login": "node -e 'require(\"./server\").login'",
     "sample": "node -e 'require(\"./server\").getPatientSamples'",
     "batch-sample": "node -e 'require(\"./server\").makeBatchSamples'",
-    "parse": "node server.js --file='example-hamilton-logs/test.csv'"
+    "parse": "node server.js --file=example-hamilton-logs/test.csv > log.txt"
   },
   "dependencies": {
     "axios": "^0.19.2",

@@ -259,7 +259,7 @@ async function qPCRRunTracking(sampleID, ctN1, ctN2, ctRP, result){
 }
 
 /**
- * Calls the appropriate update function based on origin
+ * Calls the appropriate update function based on protocol
  * @param csvRow row in the CSV
  */
 async function lineageTracking(csvRow){
@@ -306,6 +306,7 @@ async function lineageTracking(csvRow){
 async function parse_logfile(logfile){
   // console.log(logfile);
   // console.log(origin);
+  console.log(`Log begin: ${new Date().toLocaleString("en-US", {timeZone: "America/New_York"})}\n`);
 
   let auth = await login();
   if (!auth || auth !== 200){
