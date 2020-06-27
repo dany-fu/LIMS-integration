@@ -281,7 +281,7 @@ async function qPCRRunTracking(sampleID, ctN1, ctN2, ctRP, result){
 async function lineageTracking(csvRow){
   let protocol = csvRow[constants.PROTOCOL].toUpperCase();
   if (!protocol || (!(protocol in constants.ORIGIN_VAL))){
-    logger.error(`${protocol} is not recognized as a supported process. Must be one of the four values: 
+    logger.error(`${protocol} is not recognized as a supported process. Must be one of the four values:
               ${Object.keys(constants.ORIGIN_VAL)}. Index ${csvRow[constants.PROTOCOL]} not processed.`);
     return;
   }
@@ -320,9 +320,8 @@ async function lineageTracking(csvRow){
 }
 
 async function parse_logfile(logfile){
-  // console.log(logfile);
-  // console.log(origin);
   logger.info(`Logged: ${new Date().toLocaleString("en-US", {timeZone: "America/New_York"})}\n`);
+  logger.info(logfile);
 
   let auth = await login();
   if (!auth || auth !== 200){
@@ -343,5 +342,3 @@ async function parse_logfile(logfile){
  * file: path of the CSV file to be parsed
  */
 parse_logfile(argv.file);
-
-
