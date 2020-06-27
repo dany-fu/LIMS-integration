@@ -5,6 +5,16 @@ const axios = require("axios").default;
 const csv = require("fast-csv");
 const fs = require("fs");
 const argv = require("minimist")(process.argv.slice(2));
+const winston = require('winston');
+const logger = winston.createLogger({
+  level: 'info',
+  transports: [
+    // - Write all logs with level `error` and below to `error.log`
+    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    // - Write all logs with level `info` and below to `combined.log`
+    new winston.transports.File({ filename: 'combined.log' }),
+  ],
+});
 const constants = require("./constants.js");
 
 
@@ -34,14 +44,14 @@ async function login(username, password) {
       password: password,
     })
     .then((res) => {
-      console.log(`Authentication status code: ${res.status}`);
+      logger.info(`Authentication status code: ${res.status}`);
       if(res.status === 200){
         axios.defaults.headers.common['Authorization'] = res.data.token;
       }
       return res.status;
     })
     .catch((error) => {
-      console.error(error);
+      logger.error(error);
       return null;
     });
 }
@@ -56,14 +66,14 @@ async function makeSample(name){
         name: name,
       })
       .then((res) => {
-        console.log(`Make sample statusCode: ${res.status}`);
+        logger.info(`Make sample statusCode: ${res.status}`);
         if (res.status === 200){
-          console.log(`New sample ID: ${res.data}`);
+          logger.info(`New sample ID: ${res.data}`);
           return res.data;
         }
       })
       .catch((error) => {
-        console.error(error);
+        logger.error(error);
       });
 }
 
@@ -83,11 +93,11 @@ async function updateMeta({sampleId, key, value, type}={}){
       sampleDataType: type,
     })
     .then((res) => {
-      console.log(`Update sample: ${sampleId}, field:${key}, statusCode: ${res.status}`);
-      console.log(res.data);
+      logger.info(`Update sample: ${sampleId}, field:${key}, statusCode: ${res.status}`);
+      logger.info(res.data);
     })
     .catch((error) => {
-      console.error(error);
+      logger.error(error);
     });
 }
 
@@ -126,11 +136,11 @@ async function searchForPatienSample(searchTerm){
 
   return axios.get(`${constants.ENDPOINTS.GET_ALL_PATIENT_SAMPLES}&search=${searchTerm}`)
     .then((res) => {
-      console.log(`statusCode: ${res.status}`);
+      logger.info(`statusCode: ${res.status}`);
       return res.data;
     })
     .catch((error) => {
-      console.error(error);
+      logger.error(error);
     });
 }
 
@@ -142,10 +152,10 @@ async function searchForPatienSample(searchTerm){
 async function getPatientSample(barcode){
   return axios.get(`${constants.ENDPOINTS.GET_PATIENT_SAMPLE}&name=${barcode}`)
     .then((res) => {
-      console.log(`statusCode: ${res.status}`);
+      logger.info(`statusCode: ${res.status}`);
       if(res.status === 200 && res.data.data.length !== 0){
         if(res.data.data.length > 1){
-          console.log(`More than one sample found with name ${barcode}`);
+          logger.warn(`More than one sample found with name ${barcode}`);
           return null;
         }
         return res.data.data[0].sampleID;
@@ -153,7 +163,7 @@ async function getPatientSample(barcode){
       return null;
     })
     .catch((error) => {
-      console.error(error);
+      logger.error(error);
       return null;
     });
 }
@@ -271,7 +281,7 @@ async function qPCRRunTracking(sampleID, ctN1, ctN2, ctRP, result){
 async function lineageTracking(csvRow){
   let protocol = csvRow[constants.PROTOCOL].toUpperCase();
   if (!protocol || (!(protocol in constants.ORIGIN_VAL))){
-    console.log(`${protocol} is not recognized as a supported process. Must be one of the four values: 
+    logger.error(`${protocol} is not recognized as a supported process. Must be one of the four values: 
               ${Object.keys(constants.ORIGIN_VAL)}. Index ${csvRow[constants.PROTOCOL]} not processed.`);
     return;
   }
@@ -279,7 +289,7 @@ async function lineageTracking(csvRow){
   let sampleBC = csvRow["Sample Tube Barcode"];
   let sampleID = await getPatientSample(sampleBC);
   if(!sampleID){
-    console.log(`Sample for barcode ID ${sampleBC} not found`);
+    logger.warn(`Sample for barcode ID ${sampleBC} not found`);
     return;
   }
 
@@ -312,21 +322,21 @@ async function lineageTracking(csvRow){
 async function parse_logfile(logfile){
   // console.log(logfile);
   // console.log(origin);
-  console.log(`Log begin: ${new Date().toLocaleString("en-US", {timeZone: "America/New_York"})}\n`);
+  logger.info(`Logged: ${new Date().toLocaleString("en-US", {timeZone: "America/New_York"})}\n`);
 
   let auth = await login();
   if (!auth || auth !== 200){
-    console.log(`Failed to log into eLabs.`);
+    logger.error(`Failed to log into eLabs.`);
     return;
   }
 
   fs.createReadStream(logfile)
     .pipe(csv.parse({ headers: true }))
-    .on('error', error => console.error(error))
+    .on('error', error => logger.error(error))
     .on('data', (row) => {
       lineageTracking(row);
     })
-    .on('end', (rowCount) => console.log(`Parsed ${rowCount} records`));
+    .on('end', (rowCount) => logger.info(`Parsed ${rowCount} records`));
 }
 
 /**
