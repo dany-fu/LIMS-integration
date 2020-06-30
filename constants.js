@@ -1,9 +1,4 @@
 const PATIENT_SAMPLE_ID = 33369;
-const INDEX = "Index";
-const PROTOCOL = "Protocol";
-const SAMPLE_TUBE_BC = "Sample Tube Barcode";
-const DEST_BC = "Output Barcode";
-const DEST_WELL_NUM = "Output Well Number";
 
 const ENDPOINTS = {
   LOGIN: "https://us.elabjournal.com/api/v1/auth/user",
@@ -23,9 +18,9 @@ const META = {
   QPCR_PLATE_WELL_NUM: {KEY: "qPCR Plate Well Location", TYPE: "TEXT"},
   STATUS: {KEY: "Sample Process Status", TYPE: "COMBO"},
   RESULT: {KEY: "COVID-19 Test Result", TYPE: "COMBO"},
-  CT_N1: {KEY: "CT Value (N1)", TYPE: "NUMERIC"},
-  CT_N2: {KEY: "CT Value (N2)", TYPE: "NUMERIC"},
-  CT_RP: {KEY: "CT Value (N2)", TYPE: "NUMERIC"}
+  CT_N1: {KEY: "CT Value (N1)", TYPE: "TEXT"},
+  CT_N2: {KEY: "CT Value (N2)", TYPE: "TEXT"},
+  CT_RP: {KEY: "CT Value (RP)", TYPE: "TEXT"}
 };
 
 const STATUS_VAL = {
@@ -44,16 +39,27 @@ const TEST_RESULT ={
 const ORIGIN_VAL = {
   SAMPLE_PREP: "SAMPLE_PREP",
   RNA_EXTRACTION: "RNA_EXTRACTION",
-  QPCR_PREP: "QPCR_PREP",
-  QPCR_RUN: "QPCR_RUN"
+  QPCR_PREP: "QPCR_PREP"
+};
+
+const HAMILTON_LOG_HEADERS = {
+  INDEX: "Index",
+  PROTOCOL: "Protocol",
+  SAMPLE_TUBE_BC: "Sample Tube Barcode",
+  DEST_BC: "Output Barcode",
+  DEST_WELL_NUM: "Output Well Number"
+};
+
+const QPCR_LOG_HEADERS = {
+  CALL: "Call",
+  CQ: "Cq",
+  WELL: "Well",
+  TARGET: "Target"
 };
 
 module.exports = {
-  INDEX: INDEX,
-  PROTOCOL: PROTOCOL,
-  SAMPLE_TUBE_BC: SAMPLE_TUBE_BC,
-  DEST_BC: DEST_BC,
-  DEST_WELL_NUM: DEST_WELL_NUM,
+  HAMILTON_LOG_HEADERS: HAMILTON_LOG_HEADERS,
+  QPCR_LOG_HEADERS: QPCR_LOG_HEADERS,
   ENDPOINTS: ENDPOINTS,
   META: META,
   STATUS_VAL: STATUS_VAL,

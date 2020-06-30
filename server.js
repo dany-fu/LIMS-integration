@@ -241,17 +241,69 @@ function qPCRPrepTracking(sampleID, destBC, destWellNum){
 }
 
 /**
- * Updates PatientSample with CT values and final result
- * from the QuantStudio and update status
- * @param sampleID
- * @param ctN1
- * @param ctN2
- * @param ctRP
- * @param result
+ * Calls the appropriate update function based on Hamilton protocol
+ * @param csvRow row in the CSV
+ */
+async function lineageTracking(csvRow){
+  let protocol = csvRow[constants.HAMILTON_LOG_HEADERS.PROTOCOL];
+  if (!protocol || (!(protocol in constants.ORIGIN_VAL))){
+    let protocolVals = Object.keys(constants.ORIGIN_VAL);
+    logger.error(`${protocol} is not recognized as a supported process. Must be one of the 
+                  ${protocolVals.length} values: ${Object.keys(constants.ORIGIN_VAL)}. 
+                  Index ${csvRow[constants.HAMILTON_LOG_HEADERS.INDEX]} not processed.`);
+    return;
+  }
+
+  let sampleBC = csvRow[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC];
+  let sampleID = await getPatientSample(sampleBC);
+  if(!sampleID){
+    logger.warn(`Sample for barcode ID ${sampleBC} not found`);
+    return;
+  }
+
+  let destBC = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_BC];
+  let destWellNum = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_WELL_NUM];
+
+  switch(protocol){
+    case constants.ORIGIN_VAL.SAMPLE_PREP:
+      samplePrepTracking(sampleID, destBC, destWellNum);
+      break;
+    case constants.ORIGIN_VAL.RNA_EXTRACTION:
+      rnaExtractionTracking(sampleID, destBC, destWellNum);
+      break;
+    case constants.ORIGIN_VAL.QPCR_PREP:
+      qPCRPrepTracking(sampleID, destBC, destWellNum);
+      break;
+  }
+}
+
+/**
+ * Update "call" of the test, results are POSITIVE, NEGATIVE, or INVALID
+ * @param csvRow
  * @returns {Promise<void>}
  */
-async function qPCRRunTracking(sampleID, ctN1, ctN2, ctRP, result){
-  console.log("qPCR Run");
+async function updateTestResult(csvRow){
+  let result = csvRow[constants.CALL];
+  updateMeta({sampleId:sampleID,
+    key: constants.META.RESULT.KEY,
+    value: result,
+    type: constants.META.RESULT.TYPE}); //update COVID-19 Test Result
+  updateMeta({sampleId:sampleID,
+    key: constants.META.STATUS.KEY,
+    value: constants.STATUS_VAL.QPCR_DONE,
+    type: constants.META.STATUS.TYPE}); //update status to "qPCR Run"
+}
+
+/**
+ * Updates PatientSample with CT values from the QuantStudio
+ * @param csvRow
+ * @returns {Promise<void>}
+ */
+async function updateCTValues(csvRow, sampleIdDict){
+  let ctN1;
+  let ctN2;
+  let ctRP;
+  let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
   updateMeta({sampleId:sampleID,
     key: constants.META.CT_N1.KEY,
     value: ctN1,
@@ -264,59 +316,6 @@ async function qPCRRunTracking(sampleID, ctN1, ctN2, ctRP, result){
     key: constants.META.CT_RP.KEY,
     value: ctRP,
     type: constants.META.CT_RP.TYPE}); //update Rnase P CT value
-  updateMeta({sampleId:sampleID,
-    key: constants.META.RESULT.KEY,
-    value: result,
-    type: constants.META.RESULT.TYPE}); //update COVID-19 Test Result
-  updateMeta({sampleId:sampleID,
-    key: constants.META.STATUS.KEY,
-    value: constants.STATUS_VAL.QPCR_DONE,
-    type: constants.META.STATUS.TYPE}); //update status to "qPCR Run"
-}
-
-/**
- * Calls the appropriate update function based on protocol
- * @param csvRow row in the CSV
- */
-async function lineageTracking(csvRow){
-  let protocol = csvRow[constants.PROTOCOL].toUpperCase();
-  if (!protocol || (!(protocol in constants.ORIGIN_VAL))){
-    logger.error(`${protocol} is not recognized as a supported process. Must be one of the four values:
-              ${Object.keys(constants.ORIGIN_VAL)}. Index ${csvRow[constants.PROTOCOL]} not processed.`);
-    return;
-  }
-
-  let sampleBC = csvRow["Sample Tube Barcode"];
-  let sampleID = await getPatientSample(sampleBC);
-  if(!sampleID){
-    logger.warn(`Sample for barcode ID ${sampleBC} not found`);
-    return;
-  }
-
-  if(equalsIgnoringCase(protocol, constants.ORIGIN_VAL.QPCR_RUN)){
-    let ctN1;
-    let ctN2;
-    let ctRP;
-    let result;
-    qPCRRunTracking(sampleID, ctN1, ctN2, ctRP, result);
-
-  } else {
-
-    let destBC = csvRow["Output Barcode"];
-    let destWellNum = csvRow["Output Well Number"];
-
-    switch(protocol){
-      case constants.ORIGIN_VAL.SAMPLE_PREP:
-        samplePrepTracking(sampleID, destBC, destWellNum);
-        break;
-      case constants.ORIGIN_VAL.RNA_EXTRACTION:
-        rnaExtractionTracking(sampleID, destBC, destWellNum);
-        break;
-      case constants.ORIGIN_VAL.QPCR_PREP:
-        qPCRPrepTracking(sampleID, destBC, destWellNum);
-        break;
-    }
-  }
 }
 
 async function parse_logfile(logfile){
@@ -329,11 +328,20 @@ async function parse_logfile(logfile){
     return;
   }
 
+  let sampleIdDict = {};
+
   fs.createReadStream(logfile)
     .pipe(csv.parse({ headers: true }))
     .on('error', error => logger.error(error))
     .on('data', (row) => {
-      lineageTracking(row);
+      if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
+        lineageTracking(row);
+      } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
+        updateCTValues(row, sampleIdDict);
+      } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
+        updateTestResult(row);
+      }
+
     })
     .on('end', (rowCount) => logger.info(`Parsed ${rowCount} records`));
 }
