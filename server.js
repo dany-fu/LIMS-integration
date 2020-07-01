@@ -29,7 +29,7 @@ function equalsIgnoringCase(text, other) {
 }
 
 /**
- * Authenticate this function must occur before any other API calls can be made
+ * Authentication; this function must occur before any other API calls can be made
  * @param username
  * @param password
  * @returns {Promise<T>} A token is returned if the login is successful
@@ -177,7 +177,6 @@ async function getPatientSample(barcode){
  * @returns {Promise<void>}
  */
 async function samplePrepTracking(sampleID, destBC, destWellNum){
-  console.log("sample prep");
   updateMeta({sampleId:sampleID,
     key: constants.META.DEEPWELL_BC.KEY,
     value: destBC,
@@ -201,7 +200,6 @@ async function samplePrepTracking(sampleID, destBC, destWellNum){
  * @returns {Promise<void>}
  */
 async function rnaExtractionTracking(sampleID, destBC, destWellNum){
-  console.log("RNA extraction");
   updateMeta({sampleId:sampleID,
     key: constants.META.RNA_PLATE_BC.KEY,
     value: destBC,
@@ -225,7 +223,6 @@ async function rnaExtractionTracking(sampleID, destBC, destWellNum){
  * @returns {Promise<void>}
  */
 function qPCRPrepTracking(sampleID, destBC, destWellNum){
-  console.log("qPCR prep");
   updateMeta({sampleId:sampleID,
               key: constants.META.QPCR_PLATE_BC.KEY,
               value: destBC,
@@ -251,13 +248,15 @@ async function lineageTracking(csvRow){
     logger.error(`${protocol} is not recognized as a supported process. Must be one of the 
                   ${protocolVals.length} values: ${Object.keys(constants.ORIGIN_VAL)}. 
                   Index ${csvRow[constants.HAMILTON_LOG_HEADERS.INDEX]} not processed.`);
+    process.exitCode = 8;
     return;
   }
 
   let sampleBC = csvRow[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC];
   let sampleID = await getPatientSample(sampleBC);
   if(!sampleID){
-    logger.warn(`Sample for barcode ID ${sampleBC} not found`);
+    logger.error(`Sample for barcode ID ${sampleBC} not found`);
+    process.exitCode = 8;
     return;
   }
 
@@ -325,6 +324,7 @@ async function parse_logfile(logfile){
   let auth = await login();
   if (!auth || auth !== 200){
     logger.error(`Failed to log into eLabs.`);
+    process.exitCode = 8;
     return;
   }
 
@@ -332,7 +332,10 @@ async function parse_logfile(logfile){
 
   fs.createReadStream(logfile)
     .pipe(csv.parse({ headers: true }))
-    .on('error', error => logger.error(error))
+    .on('error', (error) => {
+      logger.error(error);
+      process.exitCode = 8;
+    })
     .on('data', (row) => {
       if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
         lineageTracking(row);
@@ -350,3 +353,6 @@ async function parse_logfile(logfile){
  * file: path of the CSV file to be parsed
  */
 parse_logfile(argv.file);
+process.on('exit', (code) => {
+  logger.info('Process exit event with code: ', code);
+});
