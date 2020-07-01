@@ -1,9 +1,6 @@
 {
   "scripts": {
-    "start": "node server.js",
-    "login": "node -e 'require(\"./server\").login'",
-    "sample": "node -e 'require(\"./server\").getPatientSamples'",
-    "batch-sample": "node -e 'require(\"./server\").makeBatchSamples'",
+    "batch-sample": "node test/make_samples.js --file=example-hamilton-logs/test.csv",
     "parse": "node server.js --file=example-hamilton-logs/test.csv"
   },
   "dependencies": {
