@@ -27,6 +27,18 @@ function equalsIgnoringCase(text, other) {
   return text.localeCompare(other, undefined, { sensitivity: 'accent' }) === 0;
 }
 
+function getNumAttempts(patientSample){
+  return patientSample.data[0].meta.find(m => m.key === constants.META.NUM_ATTEMPTS).value;
+}
+
+function getSampleId(patientSample){
+  return patientSample.data[0].sampleID;
+}
+
+/******************
+ * ELABS API CALLS
+ ******************/
+
 /**
  * Authentication; this function must occur before any other API calls can be made
  * @param username
@@ -51,6 +63,7 @@ async function login(username, password) {
     })
     .catch((error) => {
       logger.error(error);
+      process.exitCode = 8;
       return null;
     });
 }
@@ -61,21 +74,28 @@ async function login(username, password) {
  * @param key Name of the field to be updated
  * @param value Value of the field to be updated
  * @param type The field type (dropdown, text, radio button, etc)
+ * @param metaId The sampleTypeMetaID
  * @returns {Promise<void>}
  */
-async function updateMeta({sampleId, key, value, type}={}){
+async function updateMeta({sampleId, key, value, type, metaId}={}){
   return axios
     .put(`https://us.elabjournal.com/api/v1/samples/${sampleId}/meta`, {
       key: key,
       value: value,
       sampleDataType: type,
+      sampleTypeMetaID: metaId
     })
     .then((res) => {
-      logger.info(`Update sample: ${sampleId}, field:${key}, statusCode: ${res.status}`);
-      logger.info(res.data);
+      if(res.status === 200){
+        logger.info(`Update sample: ${sampleId}, field:${key}, statusCode: ${res.status}`);
+      } else {
+        logger.error(res.data);
+        process.exitCode = 8;
+      }
     })
     .catch((error) => {
       logger.error(error);
+      process.exitCode = 8;
     });
 }
 
@@ -85,41 +105,57 @@ async function updateMeta({sampleId, key, value, type}={}){
  * @returns {Promise<void>}
  */
 async function searchForPatienSample(searchTerm){
-  await login();
-
-  return axios.get(`${constants.ENDPOINTS.GET_ALL_PATIENT_SAMPLES}&search=${searchTerm}`)
+  return axios.get(`${constants.ENDPOINTS.GET_PATIENT_SAMPLE}&search=${searchTerm}`)
     .then((res) => {
       logger.info(`statusCode: ${res.status}`);
       return res.data;
     })
     .catch((error) => {
       logger.error(error);
+      process.exitCode = 8;
+      return null;
     });
 }
 
 /**
  * Find a Patient Sample with the given barcode (which is also its name)
- * @param barcode
- * @returns {Promise<void>} Sample object if found, else Null
+ * Returns null if more than one sample can be found with the same barcode
+ * @param barcode Name of the sample
+ * @returns {Promise<void>} Sample object with all custom fields if found, else Null
  */
 async function getPatientSample(barcode){
   return axios.get(`${constants.ENDPOINTS.GET_PATIENT_SAMPLE}&name=${barcode}`)
     .then((res) => {
-      logger.info(`statusCode: ${res.status}`);
-      if(res.status === 200 && res.data.data.length !== 0){
-        if(res.data.data.length > 1){
-          logger.warn(`More than one sample found with name ${barcode}`);
+      if(res.status === 200){
+        if(res.data.data.length === 1){
+          logger.info(`Got sample with barcode ${barcode}, statusCode: ${res.status}`);
+          return res.data;
+        } else {
+          logger.error(`More than one sample found with name ${barcode}`);
+          process.exitCode = 8;
           return null;
         }
-        return res.data.data[0].sampleID;
+      } else{
+        logger.error(res.data);
+        process.exitCode = 8;
+        return null;
       }
-      return null;
     })
     .catch((error) => {
       logger.error(error);
+      process.exitCode = 8;
       return null;
     });
 }
+
+
+
+
+
+
+/******************************
+ * HAMILTON RELATED FUNCTIONS
+ ******************************/
 
 /**
  * Update PatientSample with the plate barcode and well number
@@ -133,15 +169,18 @@ async function samplePrepTracking(sampleID, destBC, destWellNum){
   updateMeta({sampleId:sampleID,
     key: constants.META.DEEPWELL_BC.KEY,
     value: destBC,
-    type: constants.META.DEEPWELL_BC.TYPE}); //update RNA Plate Barcode
+    type: constants.META.DEEPWELL_BC.TYPE,
+    metaId: constants.META.DEEPWELL_BC.META_ID}); //update RNA Plate Barcode
   updateMeta({sampleId:sampleID,
     key: constants.META.DEEPWELL_WELL_NUM.KEY,
     value: destWellNum,
-    type: constants.META.DEEPWELL_WELL_NUM.TYPE}); //update RNA Plate Well Location
+    type: constants.META.DEEPWELL_WELL_NUM.TYPE,
+    metaId: constants.META.DEEPWELL_WELL_NUM.META_ID}); //update RNA Plate Well Location
   updateMeta({sampleId:sampleID,
     key: constants.META.STATUS.KEY,
     value: constants.STATUS_VAL.SAMPLE_PREP_DONE,
-    type: constants.META.STATUS.TYPE}); //update status to "Sample Transferred To 96-Well Plate"
+    type: constants.META.STATUS.TYPE,
+    metaId: constants.META.STATUS.META_ID}); //update status to "Sample Transferred To 96-Well Plate"
 }
 
 /**
@@ -156,15 +195,18 @@ async function rnaExtractionTracking(sampleID, destBC, destWellNum){
   updateMeta({sampleId:sampleID,
     key: constants.META.RNA_PLATE_BC.KEY,
     value: destBC,
-    type: constants.META.RNA_PLATE_BC.TYPE}); //update RNA Plate Barcode
+    type: constants.META.RNA_PLATE_BC.TYPE,
+    metaId: constants.META.RNA_PLATE_BC.META_ID}); //update RNA Plate Barcode
   updateMeta({sampleId:sampleID,
     key: constants.META.RNA_PLATE_WELL_NUM.KEY,
     value: destWellNum,
-    type: constants.META.RNA_PLATE_WELL_NUM.TYPE}); //update RNA Plate Well Location
+    type: constants.META.RNA_PLATE_WELL_NUM.TYPE,
+    metaId: constants.META.RNA_PLATE_WELL_NUM.META_ID}); //update RNA Plate Well Location
   updateMeta({sampleId:sampleID,
     key: constants.META.STATUS.KEY,
     value: constants.STATUS_VAL.RNA_DONE,
-    type: constants.META.STATUS.TYPE}); //update status to "RNA Extracted"
+    type: constants.META.STATUS.TYPE,
+    metaId: constants.META.STATUS.META_ID}); //update status to "RNA Extracted"
 }
 
 /**
@@ -179,15 +221,18 @@ function qPCRPrepTracking(sampleID, destBC, destWellNum){
   updateMeta({sampleId:sampleID,
               key: constants.META.QPCR_PLATE_BC.KEY,
               value: destBC,
-              type: constants.META.QPCR_PLATE_BC.TYPE}); //update qPCR Plate Barcode
+              type: constants.META.QPCR_PLATE_BC.TYPE,
+              metaId: constants.META.QPCR_PLATE_BC.META_ID}); //update qPCR Plate Barcode
   updateMeta({sampleId:sampleID,
               key: constants.META.QPCR_PLATE_WELL_NUM.KEY,
               value: destWellNum,
-              type: constants.META.QPCR_PLATE_WELL_NUM.TYPE}); //update qPCR Plate Well Location
+              type: constants.META.QPCR_PLATE_WELL_NUM.TYPE,
+              metaId: constants.META.QPCR_PLATE_WELL_NUM.META_ID}); //update qPCR Plate Well Location
   updateMeta({sampleId:sampleID,
               key: constants.META.STATUS.KEY,
               value: constants.STATUS_VAL.QPCR_PREP_DONE,
-              type: constants.META.STATUS.TYPE}); //update status to "qPCR Reactions Prepared"
+              type: constants.META.STATUS.TYPE,
+              metaId: constants.META.STATUS.META_ID}); //update status to "qPCR Reactions Prepared"
 }
 
 /**
@@ -206,13 +251,14 @@ async function lineageTracking(csvRow){
   }
 
   let sampleBC = csvRow[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC];
-  let sampleID = await getPatientSample(sampleBC);
-  if(!sampleID){
+  let sampleObj = await getPatientSample(sampleBC);
+  if(!sampleObj){
     logger.error(`Sample for barcode ID ${sampleBC} not found`);
     process.exitCode = 8;
     return;
   }
 
+  let sampleID = getSampleId(sampleObj);
   let destBC = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_BC];
   let destWellNum = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_WELL_NUM];
 
@@ -229,6 +275,11 @@ async function lineageTracking(csvRow){
   }
 }
 
+
+/********************************
+ * QUANTSTUDIO RELATED FUNCTIONS
+ ********************************/
+
 /**
  * Update "call" of the test, results are POSITIVE, NEGATIVE, or INVALID
  * @param csvRow
@@ -239,11 +290,13 @@ async function updateTestResult(csvRow){
   updateMeta({sampleId:sampleID,
     key: constants.META.RESULT.KEY,
     value: result,
-    type: constants.META.RESULT.TYPE}); //update COVID-19 Test Result
+    type: constants.META.RESULT.TYPE,
+    metaId: constants.META.RESULT.META_ID}); //update COVID-19 Test Result
   updateMeta({sampleId:sampleID,
     key: constants.META.STATUS.KEY,
     value: constants.STATUS_VAL.QPCR_DONE,
-    type: constants.META.STATUS.TYPE}); //update status to "qPCR Run"
+    type: constants.META.STATUS.TYPE,
+    metaId: constants.META.STATUS.META_ID}); //update status to "qPCR Run"
 }
 
 /**
@@ -259,15 +312,18 @@ async function updateCTValues(csvRow, sampleIdDict){
   updateMeta({sampleId:sampleID,
     key: constants.META.CT_N1.KEY,
     value: ctN1,
-    type: constants.META.CT_N1.TYPE}); //update N1 CT value
+    type: constants.META.CT_N1.TYPE,
+    metaId: constants.META.CT_N1.META_ID}); //update N1 CT value
   updateMeta({sampleId:sampleID,
     key: constants.META.CT_N2.KEY,
     value: ctN2,
-    type: constants.META.CT_N2.TYPE}); //update N2 CT value
+    type: constants.META.CT_N2.TYPE,
+    metaId: constants.META.CT_N2.META_ID}); //update N2 CT value
   updateMeta({sampleId:sampleID,
     key: constants.META.CT_RP.KEY,
     value: ctRP,
-    type: constants.META.CT_RP.TYPE}); //update Rnase P CT value
+    type: constants.META.CT_RP.TYPE,
+    metaId: constants.META.CT_RP.META_ID}); //update Rnase P CT value
 }
 
 async function parse_logfile(logfile){
@@ -307,5 +363,6 @@ async function parse_logfile(logfile){
  */
 parse_logfile(argv.file);
 process.on('exit', (code) => {
+  console.log(`Exited with code ${code}`);
   logger.info('Process exit event with code: ', code);
 });

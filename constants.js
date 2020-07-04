@@ -1,26 +1,31 @@
 const PATIENT_SAMPLE_ID = 33369;
 
+const INSTANCE = "test"; //test or prod
+const DOMAIN_PROD = "";
+const DOMAIN_TEST = "https://us.elabjournal.com/api/v1";
+const DOMAIN = INSTANCE === "prod"? DOMAIN_PROD:DOMAIN_TEST;
+
+
 const ENDPOINTS = {
-  LOGIN: "https://us.elabjournal.com/api/v1/auth/user",
-  GET_SAMPLE_TYPES: "https://us.elabjournal.com/api/v1/sampleTypes",
-  CREATE_SAMPLE: "https://us.elabjournal.com/api/v1/samples?autoCreateMetaDefaults=true",
-  GET_ALL_PATIENT_SAMPLES: `https://us.elabjournal.com/api/v1/samples?$expand=meta&sampleTypeID=${PATIENT_SAMPLE_ID}`,
-  GET_PATIENT_SAMPLE: `https://us.elabjournal.com/api/v1/samples?sampleTypeID=${PATIENT_SAMPLE_ID}`
+  LOGIN: `${DOMAIN}/auth/user`,
+  GET_SAMPLE_TYPES: `${DOMAIN}/sampleTypes`,
+  CREATE_SAMPLE: `${DOMAIN}/samples?autoCreateMetaDefaults=true`,
+  GET_PATIENT_SAMPLE: `${DOMAIN}/samples?$expand=meta&sampleTypeID=${PATIENT_SAMPLE_ID}`
 };
 
 const META = {
-  SAMPLE_BC: {KEY: "Sample Barcode", TYPE: "TEXT"},
-  DEEPWELL_BC: {KEY: "Sample Deep-Well Barcode", TYPE: "TEXT"},
-  DEEPWELL_WELL_NUM: {KEY: "Sample Deep-Well Well Location", TYPE: "TEXT"},
-  RNA_PLATE_BC: {KEY: "RNA Extraction Plate Barcode", TYPE: "TEXT"},
-  RNA_PLATE_WELL_NUM: {KEY: "RNA Extraction Plate Well Location", TYPE: "TEXT"},
-  QPCR_PLATE_BC: {KEY: "qPCR Plate Barcode", TYPE: "TEXT"},
-  QPCR_PLATE_WELL_NUM: {KEY: "qPCR Plate Well Location", TYPE: "TEXT"},
-  STATUS: {KEY: "Sample Process Status", TYPE: "COMBO"},
-  RESULT: {KEY: "COVID-19 Test Result", TYPE: "COMBO"},
-  CT_N1: {KEY: "CT Value (N1)", TYPE: "TEXT"},
-  CT_N2: {KEY: "CT Value (N2)", TYPE: "TEXT"},
-  CT_RP: {KEY: "CT Value (RP)", TYPE: "TEXT"}
+  DEEPWELL_BC: {KEY: "Sample Deep-Well Barcode", TYPE: "TEXT", META_ID:215483},
+  DEEPWELL_WELL_NUM: {KEY: "Sample Deep-Well Well Location", TYPE: "TEXT", META_ID:215495},
+  RNA_PLATE_BC: {KEY: "RNA Extraction Plate Barcode", TYPE: "TEXT", META_ID:215498},
+  RNA_PLATE_WELL_NUM: {KEY: "RNA Extraction Plate Well Location", TYPE: "TEXT", META_ID:215501},
+  QPCR_PLATE_BC: {KEY: "qPCR Plate Barcode", TYPE: "TEXT", META_ID:215504},
+  QPCR_PLATE_WELL_NUM: {KEY: "qPCR Plate Well Location", TYPE: "TEXT", META_ID:215507},
+  STATUS: {KEY: "Sample Process Status", TYPE: "COMBO", META_ID:213099},
+  RESULT: {KEY: "COVID-19 Test Result", TYPE: "COMBO", META_ID:213096},
+  CT_N1: {KEY: "CT Value (N1)", TYPE: "TEXT", META_ID:217133},
+  CT_N2: {KEY: "CT Value (N2)", TYPE: "TEXT", META_ID:217196},
+  CT_RP: {KEY: "CT Value (RP)", TYPE: "TEXT", META_ID:217193},
+  NUM_ATTEMPTS: {KEY: "Number of Attempts", TYPE: "COMBO", META_ID:217199},
 };
 
 const STATUS_VAL = {
