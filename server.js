@@ -4,17 +4,36 @@ const axios = require("axios").default;
 const csv = require("fast-csv");
 const fs = require("fs");
 const argv = require("minimist")(process.argv.slice(2));
-const winston = require('winston');
-const logger = winston.createLogger({
+const config = require('config');
+const constants = require("./constants.js");
+
+/*****************
+ * Logging
+ * @type {winston}
+ *****************/
+const { createLogger, format, transports } = require('winston');
+const { combine, timestamp, printf } = format;
+const myFormat = printf(({ level, message, timestamp }) => {
+  return `{${timestamp} ${level}: ${message}}`;
+});
+let today = new Date().toLocaleDateString("en-US", {timeZone: "America/New_York"});
+let todayFormatted = today.substring(0, 10).replace(/\//g, "-");
+let now = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
+const logger = createLogger({
+  format: combine(
+    timestamp({
+      format: now
+    }),
+    myFormat
+  ),
   level: 'info',
   transports: [
     // - Write all logs with level `error` and below to `error.log`
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new transports.File({ filename: `logs/error-${todayFormatted}.log`, level: 'error' }),
     // - Write all logs with level `info` and below to `combined.log`
-    new winston.transports.File({ filename: 'combined.log' }),
+    new transports.File({ filename: `logs/combined-${todayFormatted}.log` }),
   ],
 });
-const constants = require("./constants.js");
 
 
 function sleep(ms) {
@@ -62,7 +81,8 @@ async function login(username, password) {
       return res.status;
     })
     .catch((error) => {
-      logger.error(error);
+      logger.error(`Failed to authenticate with message: ${error.response.data.message}
+                    Error: ${error.response.data.errors}`);
       process.exitCode = 8;
       return null;
     });
@@ -94,7 +114,8 @@ async function updateMeta({sampleId, key, value, type, metaId}={}){
       }
     })
     .catch((error) => {
-      logger.error(error);
+      logger.error(`Failed to update sample meta: ${error.response.data.message}
+                    Error: ${error.response.data.errors}`);
       process.exitCode = 8;
     });
 }
@@ -111,7 +132,8 @@ async function searchForPatienSample(searchTerm){
       return res.data;
     })
     .catch((error) => {
-      logger.error(error);
+      logger.error(`Failed to find sample with message: ${error.response.data.message}
+                    Error: ${error.response.data.errors}`);
       process.exitCode = 8;
       return null;
     });
@@ -142,7 +164,8 @@ async function getPatientSample(barcode){
       }
     })
     .catch((error) => {
-      logger.error(error);
+      logger.error(`Failed to get sample: ${barcode} with message: ${error.response.data.message}
+                    Error: ${error.response.data.errors}`);
       process.exitCode = 8;
       return null;
     });
