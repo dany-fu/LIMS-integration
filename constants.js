@@ -1,18 +1,3 @@
-const PATIENT_SAMPLE_ID = 33369;
-
-const INSTANCE = "test"; //test or prod
-const DOMAIN_PROD = "";
-const DOMAIN_TEST = "https://us.elabjournal.com/api/v1";
-const DOMAIN = INSTANCE === "prod"? DOMAIN_PROD:DOMAIN_TEST;
-
-
-const ENDPOINTS = {
-  LOGIN: `${DOMAIN}/auth/user`,
-  GET_SAMPLE_TYPES: `${DOMAIN}/sampleTypes`,
-  CREATE_SAMPLE: `${DOMAIN}/samples?autoCreateMetaDefaults=true`,
-  GET_PATIENT_SAMPLE: `${DOMAIN}/samples?$expand=meta&sampleTypeID=${PATIENT_SAMPLE_ID}`
-};
-
 const META = {
   DEEPWELL_BC: {KEY: "Sample Deep-Well Barcode", TYPE: "TEXT", META_ID:215483},
   DEEPWELL_WELL_NUM: {KEY: "Sample Deep-Well Well Location", TYPE: "TEXT", META_ID:215495},
@@ -65,7 +50,6 @@ const QPCR_LOG_HEADERS = {
 module.exports = {
   HAMILTON_LOG_HEADERS: HAMILTON_LOG_HEADERS,
   QPCR_LOG_HEADERS: QPCR_LOG_HEADERS,
-  ENDPOINTS: ENDPOINTS,
   META: META,
   STATUS_VAL: STATUS_VAL,
   TEST_RESULT: TEST_RESULT,

@@ -3,26 +3,31 @@ const axios = require("axios").default;
 const csv = require("fast-csv");
 const fs = require("fs");
 const argv = require("minimist")(process.argv.slice(2));
+const config = require('config');
+const constants = require("./constants.js");
+
+/*****************
+ * Logging
+ * @type {winston}
+ *****************/
 const winston = require('winston');
+let today = new Date().toLocaleDateString("en-US", {timeZone: "America/New_York"});
 const logger = winston.createLogger({
   level: 'info',
   transports: [
     // - Write all logs with level `error` and below to `error.log`
-    new winston.transports.File({ filename: 'error.log', level: 'error' }),
+    new winston.transports.File({ filename: `logs/error-${today}.log`, level: 'error' }),
     // - Write all logs with level `info` and below to `combined.log`
-    new winston.transports.File({ filename: 'combined.log' }),
+    new winston.transports.File({ filename: `logs/combined-${today}.log` }),
   ],
 });
-const constants = require("../constants.js");
 
-async function login(username, password) {
-  username = "danyfu@bu.edu";
-  password = "foobar";
+async function login() {
 
   return axios
-    .post(constants.ENDPOINTS.LOGIN, {
-      username: username,
-      password: password,
+    .post(config.get('endpoints.login'), {
+      username: config.get('username'),
+      password: config.get('password'),
     })
     .then((res) => {
       logger.info(`Authentication status code: ${res.status}`);
@@ -67,8 +72,8 @@ async function makeSample(name){
     name = uuidv4();
   }
   return axios
-    .post(constants.ENDPOINTS.CREATE_SAMPLE, {
-      sampleTypeID: 33369,
+    .post(config.get('endpoints.createSample'), {
+      sampleTypeID: config.get('endpoints.covidSampleTypeId'),
       name: name,
     })
     .then((res) => {

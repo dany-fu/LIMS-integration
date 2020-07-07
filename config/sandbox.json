@@ -1,0 +1,11 @@
+{
+  "username": "",
+  "password": "",
+  "covidSampleTypeId": 24021,
+  "endpoints": {
+    "login": "https://sandbox.elabjournal.com/api/v1/auth/user",
+    "createSample": "https://sandbox.elabjournal.com/api/v1/samples?autoCreateMetaDefaults=true",
+    "sampleTypes": "https://sandbox.elabjournal.com/api/v1/sampleTypes",
+    "samples": "https://sandbox.elabjournal.com/api/v1/samples"
+  }
+}

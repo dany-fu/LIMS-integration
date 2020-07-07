@@ -60,18 +60,14 @@ function getSampleId(patientSample){
 
 /**
  * Authentication; this function must occur before any other API calls can be made
- * @param username
- * @param password
  * @returns {Promise<T>} A token is returned if the login is successful
  */
-async function login(username, password) {
-  username = "danyfu@bu.edu";
-  password = "foobar";
+async function login() {
 
   return axios
-    .post(constants.ENDPOINTS.LOGIN, {
-      username: username,
-      password: password,
+    .post(config.get('endpoints.login'), {
+      username: config.get('username'),
+      password: config.get('password'),
     })
     .then((res) => {
       logger.info(`Authentication status code: ${res.status}`);
@@ -99,7 +95,7 @@ async function login(username, password) {
  */
 async function updateMeta({sampleId, key, value, type, metaId}={}){
   return axios
-    .put(`https://us.elabjournal.com/api/v1/samples/${sampleId}/meta`, {
+    .put(`${config.get('endpoints.samples')}/${sampleId}/meta`, {
       key: key,
       value: value,
       sampleDataType: type,
@@ -126,7 +122,7 @@ async function updateMeta({sampleId, key, value, type, metaId}={}){
  * @returns {Promise<void>}
  */
 async function searchForPatienSample(searchTerm){
-  return axios.get(`${constants.ENDPOINTS.GET_PATIENT_SAMPLE}&search=${searchTerm}`)
+  return axios.get(`${config.get('endpoints.samples')}&search=${searchTerm}`)
     .then((res) => {
       logger.info(`statusCode: ${res.status}`);
       return res.data;
@@ -146,7 +142,11 @@ async function searchForPatienSample(searchTerm){
  * @returns {Promise<void>} Sample object with all custom fields if found, else Null
  */
 async function getPatientSample(barcode){
-  return axios.get(`${constants.ENDPOINTS.GET_PATIENT_SAMPLE}&name=${barcode}`)
+  let endpoint = `${config.get('endpoints.samples')}
+                  ?$expand=meta&sampleTypeID=
+                  ${config.get('endpoints.covidSampleTypeId')}
+                   &name=${barcode}`;
+  return axios.get(endpoint)
     .then((res) => {
       if(res.status === 200){
         if(res.data.data.length === 1){
