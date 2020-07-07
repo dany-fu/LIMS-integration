@@ -304,7 +304,10 @@ async function lineageTracking(csvRow){
  ********************************/
 
 /**
- * Update "call" of the test, results are POSITIVE, NEGATIVE, or INVALID
+ * Update "call" of the test, results can be POSITIVE, NEGATIVE, INVALID, INCONCLUSIVE, or WARNING
+ * INVALID or INCONCLUSIVE results both require recollection of sample
+ * WARNING occurs when controls failed, and can be reattempted up to 1 more time
+ * If controls fail during attempt #2, a recollection is required
  * @param csvRow
  * @param qPCRPlateBC
  * @returns {Promise<void>}
@@ -313,7 +316,7 @@ async function updateTestResult(csvRow, qPCRPlateBC){
   let result = csvRow[constants.CALL];
   updateMeta({sampleId:sampleID,
     key: constants.META.RESULT.KEY,
-    value: result,
+    value: constants.TEST_RESULT[result],
     type: constants.META.RESULT.TYPE,
     metaId: constants.META.RESULT.META_ID}); //update COVID-19 Test Result
   updateMeta({sampleId:sampleID,

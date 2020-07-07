@@ -20,10 +20,14 @@ const STATUS_VAL = {
   QPCR_DONE: "qPCR Run"
 };
 
+// key is from the "Call" column of the QuantStudio csv
+// value is the string that it's mapped to on eLab
 const TEST_RESULT ={
   POSITIVE: "Positive",
   NEGATIVE: "Negative",
-  RETEST: "Retest Required (in lab only)"
+  INCONCLUSIVE: "Inconclusive - recollect",
+  INVALID: "Invalid - recollect",
+  WARNING: "Control Failed"
 };
 
 const ORIGIN_VAL = {
