@@ -73,7 +73,7 @@ async function makeSample(name){
   }
   return axios
     .post(config.get('endpoints.createSample'), {
-      sampleTypeID: config.get('endpoints.covidSampleTypeId'),
+      sampleTypeID: config.get('covidSampleTypeId'),
       name: name,
     })
     .then((res) => {

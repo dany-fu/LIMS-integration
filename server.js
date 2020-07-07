@@ -142,14 +142,16 @@ async function searchForPatienSample(searchTerm){
  * @returns {Promise<void>} Sample object with all custom fields if found, else Null
  */
 async function getPatientSample(barcode){
-  let endpoint = `${config.get('endpoints.samples')}
-                  ?$expand=meta&sampleTypeID=
-                  ${config.get('endpoints.covidSampleTypeId')}
-                   &name=${barcode}`;
+  let endpoint = `${config.get('endpoints.samples')}?$expand=meta&sampleTypeID=${config.get('covidSampleTypeId')}&name=${barcode}`;
   return axios.get(endpoint)
     .then((res) => {
       if(res.status === 200){
-        if(res.data.data.length === 1){
+        if(res.data.data.length === 0){
+          process.exitCode = 8;
+          logger.error(`Sample for barcode ID ${barcode} not found`);
+          return null;
+        }
+        else if(res.data.data.length === 1){
           logger.info(`Got sample with barcode ${barcode}, statusCode: ${res.status}`);
           return res.data;
         } else {
@@ -276,7 +278,6 @@ async function lineageTracking(csvRow){
   let sampleBC = csvRow[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC];
   let sampleObj = await getPatientSample(sampleBC);
   if(!sampleObj){
-    logger.error(`Sample for barcode ID ${sampleBC} not found`);
     process.exitCode = 8;
     return;
   }
