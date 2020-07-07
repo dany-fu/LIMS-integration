@@ -283,9 +283,10 @@ async function lineageTracking(csvRow){
 /**
  * Update "call" of the test, results are POSITIVE, NEGATIVE, or INVALID
  * @param csvRow
+ * @param qPCRPlateBC
  * @returns {Promise<void>}
  */
-async function updateTestResult(csvRow){
+async function updateTestResult(csvRow, qPCRPlateBC){
   let result = csvRow[constants.CALL];
   updateMeta({sampleId:sampleID,
     key: constants.META.RESULT.KEY,
@@ -302,9 +303,10 @@ async function updateTestResult(csvRow){
 /**
  * Updates PatientSample with CT values from the QuantStudio
  * @param csvRow
+ * @param qPCRPlateBC
  * @returns {Promise<void>}
  */
-async function updateCTValues(csvRow, sampleIdDict){
+async function updateCTValues(csvRow, qPCRPlateBC, sampleIdDict){
   let ctN1;
   let ctN2;
   let ctRP;
@@ -326,6 +328,22 @@ async function updateCTValues(csvRow, sampleIdDict){
     metaId: constants.META.CT_RP.META_ID}); //update Rnase P CT value
 }
 
+/**
+ * Get the barcode of the plate by searching for "# Barcode: " in the QuantStudio output
+ * @param logfile QuantStudio or Hamilton logfile
+ * @returns {string} barcode of the qPCR plate, if found, else empty string
+ */
+function getqPCRPlateBC(logfile) {
+  let barcode = "";
+  let data = fs.readFileSync(logfile, 'utf8');
+  const regex = /# Barcode: (.*)/g;
+  let found = regex.exec(data);
+  if(found){
+    barcode = found[1];
+  }
+  return barcode;
+}
+
 async function parse_logfile(logfile){
   logger.info(`Logged: ${new Date().toLocaleString("en-US", {timeZone: "America/New_York"})}\n`);
   logger.info(logfile);
@@ -338,20 +356,34 @@ async function parse_logfile(logfile){
   }
 
   let sampleIdDict = {};
+  let qPCRPlateBC = getqPCRPlateBC(logfile);
 
-  fs.createReadStream(logfile)
-    .pipe(csv.parse({ headers: true }))
+  let readStream = fs.createReadStream(logfile);
+  readStream.pipe(csv.parse({
+      headers:true,
+      comment:"#", //ignore lines that begin with #
+      skipLines:2 })
+    )
     .on('error', (error) => {
       logger.error(error);
       process.exitCode = 8;
+      readStream.destroy();
     })
     .on('data', (row) => {
       if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
         lineageTracking(row);
-      } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
-        updateCTValues(row, sampleIdDict);
-      } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
-        updateTestResult(row);
+      } else {
+        if (qPCRPlateBC.length === 0){
+          logger.error("No qPCR plate barcode was found");
+          process.exitCode = 8;
+          readStream.destroy();
+        }
+
+        if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
+          updateCTValues(row, qPCRPlateBC, sampleIdDict);
+        } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
+          updateTestResult(row, qPCRPlateBC);
+        }
       }
 
     })
@@ -364,5 +396,5 @@ async function parse_logfile(logfile){
 parse_logfile(argv.file);
 process.on('exit', (code) => {
   console.log(`Exited with code ${code}`);
-  logger.info('Process exit event with code: ', code);
+  logger.info(`Process exit event with code:${code}`);
 });
