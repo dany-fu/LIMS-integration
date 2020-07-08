@@ -36,6 +36,9 @@ const logger = createLogger({
 });
 
 
+/*******************
+ * HELPER FUNCTIONS
+ *******************/
 function sleep(ms) {
   return new Promise((resolve) => {
     setTimeout(resolve, ms);
@@ -53,6 +56,19 @@ function getNumAttempts(patientSample){
 function getSampleId(patientSample){
   return patientSample.data[0].sampleID;
 }
+
+function makeSearchURIObject(metas, plateBC, wellNum){
+  const pcrBC = metas.find(m => m.key === constants.META.QPCR_PLATE_BC);
+  const pcrWN = metas.find(m => m.key === constants.META.QPCR_PLATE_WELL_NUM);
+  return encodeURIComponent(`[{` +
+    `"sampleTypeMetaID": ${pcrBC.sampleTypeMetaID},` +
+    `"metaValue": "${plateBC}"` +
+    `}, {` +
+    `"sampleTypeMetaID": ${pcrWN.sampleTypeMetaID},` +
+    `"metaValue": "${wellNum}"` +
+  `}]`);
+}
+
 
 /******************
  * ELABS API CALLS
@@ -117,15 +133,39 @@ async function updateMeta({sampleId, key, value, type, metaId}={}){
 }
 
 /**
- * Return all Patient Samples and their meta fields that matches a search term
- * @param searchTerm
+ * Search for a sample in a specific well of a qPCR plate
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param plateBC
+ * @param wellNum
  * @returns {Promise<void>}
  */
-async function searchForPatienSample(searchTerm){
-  return axios.get(`${config.get('endpoints.samples')}&search=${searchTerm}`)
+async function searchForPatienSample(metas, plateBC, wellNum){
+  let searchParams = makeSearchURIObject(metas, plateBC, wellNum);
+  let endpoint = `${config.get('endpoints.samples')}` +
+    `?$expand=meta&sampleTypeID=${config.get('covidSampleTypeId')}` +
+    `&filterBySampleTypeMetaValues=${searchParams}`;
+
+  return axios.get(endpoint)
     .then((res) => {
-      logger.info(`statusCode: ${res.status}`);
-      return res.data;
+      if(res.status === 200){
+        if(res.data.data.length === 0){
+          process.exitCode = 8;
+          logger.error(`No sample found in well ${wellNum} of qPCR plate ${plateBC}`);
+          return null;
+        }
+        else if(res.data.data.length === 1){
+          logger.info(`Found sample ${getSampleId(res.data)} in well ${wellNum} on qPCR plate ${plateBC}`);
+          return res.data;
+        } else {
+          logger.error(`More than one sample found in well ${wellNum} of qPCR plate ${plateBC}`);
+          process.exitCode = 8;
+          return null;
+        }
+      } else{
+        logger.error(res.data);
+        process.exitCode = 8;
+        return null;
+      }
     })
     .catch((error) => {
       logger.error(`Failed to find sample with message: ${error.response.data.message}
@@ -300,7 +340,7 @@ function qPCRPrepTracking(sampleID, destBC, destWellNum, metas){
     key: constants.META.STATUS,
     value: constants.STATUS_VAL.QPCR_PREP_DONE,
     type: status.sampleDataType,
-    metaId: status.sampleTypeMetaID}); //update status to "qPCR Complete"
+    metaId: status.sampleTypeMetaID}); //update status to "qPCR Reactions Prepared"
 }
 
 /**
@@ -359,17 +399,40 @@ async function lineageTracking(csvRow, metas){
  * @returns {Promise<void>}
  */
 async function updateTestResult(csvRow, qPCRPlateBC, metas){
-  let result = csvRow[constants.CALL];
+  let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
+  let sampleObj = await searchForPatienSample(metas, qPCRPlateBC, wellNum);
+  if(!sampleObj){
+    process.exitCode = 8;
+    return;
+  }
+
+  let sampleID = getSampleId(sampleObj);
+  let call = csvRow[constants.QPCR_LOG_HEADERS.CALL];
+
+  const result = metas.find(m => m.key === constants.META.RESULT);
   updateMeta({sampleId:sampleID,
-    key: constants.META.RESULT.KEY,
-    value: constants.TEST_RESULT[result],
-    type: constants.META.RESULT.TYPE,
-    metaId: constants.META.RESULT.META_ID}); //update COVID-19 Test Result
+    key: constants.META.RESULT,
+    value: constants.TEST_RESULT[call],
+    type: result.sampleDataType,
+    metaId: result.sampleTypeMetaID}); //update COVID-19 Test Result
+
+
+  const status = metas.find(m => m.key === constants.META.STATUS);
   updateMeta({sampleId:sampleID,
-    key: constants.META.STATUS.KEY,
+    key: constants.META.STATUS,
     value: constants.STATUS_VAL.QPCR_DONE,
-    type: constants.META.STATUS.TYPE,
-    metaId: constants.META.STATUS.META_ID}); //update status to "qPCR Run"
+    type: status.sampleDataType,
+    metaId: status.sampleTypeMetaID}); //update status to "qPCR Complete"
+
+  let numAttempt = getNumAttempts(sampleObj);
+  if (numAttempt < 2){
+    const attemptMeta = metas.find(m => m.key === constants.META.NUM_ATTEMPTS);
+    updateMeta({sampleId:sampleID,
+      key: constants.META.NUM_ATTEMPTS,
+      value: ++numAttempt,
+      type: attemptMeta.sampleDataType,
+      metaId: attemptMeta.sampleTypeMetaID}); //Increase number of attempts by 1, if allowed
+  }
 }
 
 /**
@@ -418,7 +481,6 @@ function getqPCRPlateBC(logfile) {
 }
 
 async function parse_logfile(logfile){
-  logger.info(`Logged: ${new Date().toLocaleString("en-US", {timeZone: "America/New_York"})}\n`);
   logger.info(logfile);
 
   let auth = await login();

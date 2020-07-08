@@ -49,7 +49,7 @@ const HAMILTON_LOG_HEADERS = {
 const QPCR_LOG_HEADERS = {
   CALL: "Call",
   CQ: "Cq",
-  WELL: "Well",
+  WELL: "Well Position",
   TARGET: "Target"
 };
 
