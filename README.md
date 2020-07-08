@@ -23,7 +23,9 @@ This repository contains code for
       - `Protocol`       
       - `Sample Tube Barcode`    
       - `Output Barcode`    
-      - `Output Well Number `   
+      - `Output Well Number `
+      - `Reagent Names`    
+      - `Reagent Lot Numbers`   
 * QuantStudio logfile format   
    - We expect the barcode to follow the string "# Barcode: "    
    - We expect 2 additional lines between the comments and headers     

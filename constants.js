@@ -43,7 +43,9 @@ const HAMILTON_LOG_HEADERS = {
   PROTOCOL: "Protocol",
   SAMPLE_TUBE_BC: "Sample Tube Barcode",
   DEST_BC: "Output Barcode",
-  DEST_WELL_NUM: "Output Well Number"
+  DEST_WELL_NUM: "Output Well Number",
+  REAGENT_NAMES: "Reagent Names",
+  REAGENT_NUMS: "Reagent Lot Numbers"
 };
 
 const QPCR_LOG_HEADERS = {
