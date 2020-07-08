@@ -7,9 +7,9 @@ const META = {
   QPCR_PLATE_WELL_NUM: "qPCR Plate Well Location",
   STATUS: "Sample Process Status",
   RESULT: "COVID-19 Test Result",
-  CT_N1: "CT Value (N1)",
-  CT_N2: "CT Value (N2)",
-  CT_RP: "CT Value (RP)",
+  N1: "CT Value (N1)",
+  N2: "CT Value (N2)",
+  RP: "CT Value (RP)",
   NUM_ATTEMPTS: "Number of Attempts",
 };
 
@@ -47,10 +47,10 @@ const HAMILTON_LOG_HEADERS = {
 };
 
 const QPCR_LOG_HEADERS = {
-  CALL: "Call",
-  CQ: "Cq",
   WELL: "Well Position",
-  TARGET: "Target"
+  CALL: "Call",
+  TARGET: "Target",
+  CQ: "Cq"
 };
 
 module.exports = {

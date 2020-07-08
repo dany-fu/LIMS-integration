@@ -69,6 +69,22 @@ function makeSearchURIObject(metas, plateBC, wellNum){
   `}]`);
 }
 
+/**
+ * Get the barcode of the plate by searching for "# Barcode: " in the QuantStudio output
+ * @param logfile QuantStudio or Hamilton logfile
+ * @returns {string} barcode of the qPCR plate, if found, else empty string
+ */
+function getqPCRPlateBC(logfile) {
+  let barcode = "";
+  let data = fs.readFileSync(logfile, 'utf8');
+  const regex = /# Barcode: (.*)/g;
+  let found = regex.exec(data);
+  if(found){
+    barcode = found[1];
+  }
+  return barcode;
+}
+
 
 /******************
  * ELABS API CALLS
@@ -440,44 +456,33 @@ async function updateTestResult(csvRow, qPCRPlateBC, metas){
  * @param csvRow
  * @param qPCRPlateBC
  * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param sampleIdDict Mapping of well num to sample id
  * @returns {Promise<void>}
  */
 async function updateCTValues(csvRow, qPCRPlateBC, metas, sampleIdDict){
-  let ctN1;
-  let ctN2;
-  let ctRP;
+  let sampleID;
   let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
-  updateMeta({sampleId:sampleID,
-    key: constants.META.CT_N1.KEY,
-    value: ctN1,
-    type: constants.META.CT_N1.TYPE,
-    metaId: constants.META.CT_N1.META_ID}); //update N1 CT value
-  updateMeta({sampleId:sampleID,
-    key: constants.META.CT_N2.KEY,
-    value: ctN2,
-    type: constants.META.CT_N2.TYPE,
-    metaId: constants.META.CT_N2.META_ID}); //update N2 CT value
-  updateMeta({sampleId:sampleID,
-    key: constants.META.CT_RP.KEY,
-    value: ctRP,
-    type: constants.META.CT_RP.TYPE,
-    metaId: constants.META.CT_RP.META_ID}); //update Rnase P CT value
-}
-
-/**
- * Get the barcode of the plate by searching for "# Barcode: " in the QuantStudio output
- * @param logfile QuantStudio or Hamilton logfile
- * @returns {string} barcode of the qPCR plate, if found, else empty string
- */
-function getqPCRPlateBC(logfile) {
-  let barcode = "";
-  let data = fs.readFileSync(logfile, 'utf8');
-  const regex = /# Barcode: (.*)/g;
-  let found = regex.exec(data);
-  if(found){
-    barcode = found[1];
+  if (wellNum in sampleIdDict){
+    sampleID = sampleIdDict[wellNum];
+  } else {
+    let sampleObj = await searchForPatienSample(metas, qPCRPlateBC, wellNum);
+    if(!sampleObj){
+      process.exitCode = 8;
+      return;
+    }
+    sampleID = getSampleId(sampleObj);
+    sampleIdDict[wellNum] = sampleID;
   }
-  return barcode;
+
+  let target = csvRow[constants.QPCR_LOG_HEADERS.TARGET];
+  let cq = csvRow[constants.QPCR_LOG_HEADERS.CQ];
+
+  const targetMeta = metas.find(m => m.key === constants.META[target]);
+  updateMeta({sampleId:sampleID,
+    key: constants.META[target],
+    value: cq,
+    type: targetMeta.sampleDataType,
+    metaId: targetMeta.sampleTypeMetaID}); //update CT value
 }
 
 async function parse_logfile(logfile){
@@ -518,6 +523,7 @@ async function parse_logfile(logfile){
           logger.error("No qPCR plate barcode was found");
           process.exitCode = 8;
           readStream.destroy();
+          return;
         }
 
         if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
