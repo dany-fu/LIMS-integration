@@ -1,23 +1,25 @@
 const META = {
-  DEEPWELL_BC: {KEY: "Sample Deep-Well Barcode", TYPE: "TEXT", META_ID:215483},
-  DEEPWELL_WELL_NUM: {KEY: "Sample Deep-Well Well Location", TYPE: "TEXT", META_ID:215495},
-  RNA_PLATE_BC: {KEY: "RNA Extraction Plate Barcode", TYPE: "TEXT", META_ID:215498},
-  RNA_PLATE_WELL_NUM: {KEY: "RNA Extraction Plate Well Location", TYPE: "TEXT", META_ID:215501},
-  QPCR_PLATE_BC: {KEY: "qPCR Plate Barcode", TYPE: "TEXT", META_ID:215504},
-  QPCR_PLATE_WELL_NUM: {KEY: "qPCR Plate Well Location", TYPE: "TEXT", META_ID:215507},
-  STATUS: {KEY: "Sample Process Status", TYPE: "COMBO", META_ID:213099},
-  RESULT: {KEY: "COVID-19 Test Result", TYPE: "COMBO", META_ID:213096},
-  CT_N1: {KEY: "CT Value (N1)", TYPE: "TEXT", META_ID:217133},
-  CT_N2: {KEY: "CT Value (N2)", TYPE: "TEXT", META_ID:217196},
-  CT_RP: {KEY: "CT Value (RP)", TYPE: "TEXT", META_ID:217193},
-  NUM_ATTEMPTS: {KEY: "Number of Attempts", TYPE: "COMBO", META_ID:217199},
+  DEEPWELL_BC: "Sample Deep-Well Barcode",
+  DEEPWELL_WELL_NUM: "Sample Deep-Well Well Location",
+  RNA_PLATE_BC: "RNA Extraction Plate Barcode",
+  RNA_PLATE_WELL_NUM: "RNA Extraction Plate Well Location",
+  QPCR_PLATE_BC: "qPCR Plate Barcode",
+  QPCR_PLATE_WELL_NUM: "qPCR Plate Well Location",
+  STATUS: "Sample Process Status",
+  RESULT: "COVID-19 Test Result",
+  CT_N1: "CT Value (N1)",
+  CT_N2: "CT Value (N2)",
+  CT_RP: "CT Value (RP)",
+  NUM_ATTEMPTS: "Number of Attempts",
 };
 
 const STATUS_VAL = {
   SAMPLE_PREP_DONE: "Sample Transferred To 96-Well Plate",
   RNA_DONE: "RNA Extracted",
   QPCR_PREP_DONE: "qPCR Reactions Prepared",
-  QPCR_DONE: "qPCR Run"
+  QPCR_DONE: "qPCR Complete",
+  RE_EXTRACT: "Re-run RNA Extraction",
+  RE_QPCR: "Re-run qPCR"
 };
 
 // key is from the "Call" column of the QuantStudio csv

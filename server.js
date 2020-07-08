@@ -173,8 +173,30 @@ async function getPatientSample(barcode){
     });
 }
 
-
-
+/**
+ * Get all the meta fields for COVID-19 SampleType
+ * The sampleTypeId is pulled from config
+ * @returns {Promise<T>}
+ */
+async function getCovidSampleTypeMetas(){
+  return axios.get(`${config.get('endpoints.sampleTypes')}/${config.get('covidSampleTypeId')}/meta`)
+    .then((res) => {
+      if(res.status === 200){
+        logger.info(`Got COVID-19 sampleType, statusCode: ${res.status}`);
+        return res.data.data;
+      } else {
+        logger.error(`Got statusCode when fetching sample type: ${res.status}`);
+        process.exitCode = 8;
+        return null;
+      }
+    })
+    .catch((error) => {
+      logger.error(`Failed to find sample with message: ${error.response.data.message}
+                    Error: ${error.response.data.errors}`);
+      process.exitCode = 8;
+      return null;
+    });
+}
 
 
 
@@ -185,86 +207,108 @@ async function getPatientSample(barcode){
 /**
  * Update PatientSample with the plate barcode and well number
  * from the Sample Prep Hamilton and update status
- * @param sampleID
+ * @param sampleID Unique ID of the sample in eLabs
  * @param destBC
  * @param destWellNum
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @returns {Promise<void>}
  */
-async function samplePrepTracking(sampleID, destBC, destWellNum){
+async function samplePrepTracking(sampleID, destBC, destWellNum, metas){
+
+  const dwBC = metas.find(m => m.key === constants.META.DEEPWELL_BC);
   updateMeta({sampleId:sampleID,
-    key: constants.META.DEEPWELL_BC.KEY,
+    key: constants.META.DEEPWELL_BC,
     value: destBC,
-    type: constants.META.DEEPWELL_BC.TYPE,
-    metaId: constants.META.DEEPWELL_BC.META_ID}); //update RNA Plate Barcode
+    type: dwBC.sampleDataType,
+    metaId: dwBC.sampleTypeMetaID}); //update RNA Plate Barcode
+
+  const dwWN = metas.find(m => m.key === constants.META.DEEPWELL_WELL_NUM);
   updateMeta({sampleId:sampleID,
-    key: constants.META.DEEPWELL_WELL_NUM.KEY,
+    key: constants.META.DEEPWELL_WELL_NUM,
     value: destWellNum,
-    type: constants.META.DEEPWELL_WELL_NUM.TYPE,
-    metaId: constants.META.DEEPWELL_WELL_NUM.META_ID}); //update RNA Plate Well Location
+    type: dwWN.sampleDataType,
+    metaId: dwWN.sampleTypeMetaID}); //update RNA Plate Well Location
+
+  const status = metas.find(m => m.key === constants.META.STATUS);
   updateMeta({sampleId:sampleID,
-    key: constants.META.STATUS.KEY,
+    key: constants.META.STATUS,
     value: constants.STATUS_VAL.SAMPLE_PREP_DONE,
-    type: constants.META.STATUS.TYPE,
-    metaId: constants.META.STATUS.META_ID}); //update status to "Sample Transferred To 96-Well Plate"
+    type: status.sampleDataType,
+    metaId: status.sampleTypeMetaID}); //update status to "Sample Transferred To 96-Well Plate"
 }
 
 /**
  * Updates PatientSample with the plate barcode and well number
  * from the RNA Extraction Hamilton and update status
- * @param sampleID
+ * @param sampleID Unique ID of the sample in eLabs
  * @param destBC
  * @param destWellNum
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @returns {Promise<void>}
  */
-async function rnaExtractionTracking(sampleID, destBC, destWellNum){
+async function rnaExtractionTracking(sampleID, destBC, destWellNum, metas){
+
+  const rnaBC = metas.find(m => m.key === constants.META.RNA_PLATE_BC);
   updateMeta({sampleId:sampleID,
-    key: constants.META.RNA_PLATE_BC.KEY,
+    key: constants.META.RNA_PLATE_BC,
     value: destBC,
-    type: constants.META.RNA_PLATE_BC.TYPE,
-    metaId: constants.META.RNA_PLATE_BC.META_ID}); //update RNA Plate Barcode
+    type: rnaBC.sampleDataType,
+    metaId: rnaBC.sampleTypeMetaID}); //update RNA Plate Barcode
+
+  const rnaWN = metas.find(m => m.key === constants.META.RNA_PLATE_WELL_NUM);
   updateMeta({sampleId:sampleID,
-    key: constants.META.RNA_PLATE_WELL_NUM.KEY,
+    key: constants.META.RNA_PLATE_WELL_NUM,
     value: destWellNum,
-    type: constants.META.RNA_PLATE_WELL_NUM.TYPE,
-    metaId: constants.META.RNA_PLATE_WELL_NUM.META_ID}); //update RNA Plate Well Location
+    type: rnaWN.sampleDataType,
+    metaId: rnaWN.sampleTypeMetaID}); //update RNA Plate Well Location
+
+  const status = metas.find(m => m.key === constants.META.STATUS);
   updateMeta({sampleId:sampleID,
-    key: constants.META.STATUS.KEY,
+    key: constants.META.STATUS,
     value: constants.STATUS_VAL.RNA_DONE,
-    type: constants.META.STATUS.TYPE,
-    metaId: constants.META.STATUS.META_ID}); //update status to "RNA Extracted"
+    type: status.sampleDataType,
+    metaId: status.sampleTypeMetaID}); //update status to "RNA Extracted"
 }
 
 /**
  * Updates PatientSample with the plate barcode and well number
  * from the qPCR Prep Hamilton and update status
- * @param sampleID
+ * @param sampleID Unique ID of the sample in eLabs
  * @param destBC
  * @param destWellNum
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @returns {Promise<void>}
  */
-function qPCRPrepTracking(sampleID, destBC, destWellNum){
+function qPCRPrepTracking(sampleID, destBC, destWellNum, metas){
+
+  const pcrBC = metas.find(m => m.key === constants.META.QPCR_PLATE_BC);
   updateMeta({sampleId:sampleID,
-              key: constants.META.QPCR_PLATE_BC.KEY,
-              value: destBC,
-              type: constants.META.QPCR_PLATE_BC.TYPE,
-              metaId: constants.META.QPCR_PLATE_BC.META_ID}); //update qPCR Plate Barcode
+    key: constants.META.QPCR_PLATE_BC,
+    value: destBC,
+    type: pcrBC.sampleDataType,
+    metaId: pcrBC.sampleTypeMetaID}); //update RNA Plate Barcode
+
+  const pcrWN = metas.find(m => m.key === constants.META.QPCR_PLATE_WELL_NUM);
   updateMeta({sampleId:sampleID,
-              key: constants.META.QPCR_PLATE_WELL_NUM.KEY,
-              value: destWellNum,
-              type: constants.META.QPCR_PLATE_WELL_NUM.TYPE,
-              metaId: constants.META.QPCR_PLATE_WELL_NUM.META_ID}); //update qPCR Plate Well Location
+    key: constants.META.QPCR_PLATE_WELL_NUM,
+    value: destWellNum,
+    type: pcrWN.sampleDataType,
+    metaId: pcrWN.sampleTypeMetaID}); //update RNA Plate Well Location
+
+  const status = metas.find(meta => meta.key === constants.META.STATUS);
   updateMeta({sampleId:sampleID,
-              key: constants.META.STATUS.KEY,
-              value: constants.STATUS_VAL.QPCR_PREP_DONE,
-              type: constants.META.STATUS.TYPE,
-              metaId: constants.META.STATUS.META_ID}); //update status to "qPCR Reactions Prepared"
+    key: constants.META.STATUS,
+    value: constants.STATUS_VAL.QPCR_PREP_DONE,
+    type: status.sampleDataType,
+    metaId: status.sampleTypeMetaID}); //update status to "qPCR Complete"
 }
 
 /**
  * Calls the appropriate update function based on Hamilton protocol
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param csvRow row in the CSV
  */
-async function lineageTracking(csvRow){
+async function lineageTracking(csvRow, metas){
   let protocol = csvRow[constants.HAMILTON_LOG_HEADERS.PROTOCOL];
   if (!protocol || (!(protocol in constants.ORIGIN_VAL))){
     let protocolVals = Object.keys(constants.ORIGIN_VAL);
@@ -288,13 +332,13 @@ async function lineageTracking(csvRow){
 
   switch(protocol){
     case constants.ORIGIN_VAL.SAMPLE_PREP:
-      samplePrepTracking(sampleID, destBC, destWellNum);
+      samplePrepTracking(sampleID, destBC, destWellNum, metas);
       break;
     case constants.ORIGIN_VAL.RNA_EXTRACTION:
-      rnaExtractionTracking(sampleID, destBC, destWellNum);
+      rnaExtractionTracking(sampleID, destBC, destWellNum, metas);
       break;
     case constants.ORIGIN_VAL.QPCR_PREP:
-      qPCRPrepTracking(sampleID, destBC, destWellNum);
+      qPCRPrepTracking(sampleID, destBC, destWellNum, metas);
       break;
   }
 }
@@ -311,9 +355,10 @@ async function lineageTracking(csvRow){
  * If controls fail during attempt #2, a recollection is required
  * @param csvRow
  * @param qPCRPlateBC
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @returns {Promise<void>}
  */
-async function updateTestResult(csvRow, qPCRPlateBC){
+async function updateTestResult(csvRow, qPCRPlateBC, metas){
   let result = csvRow[constants.CALL];
   updateMeta({sampleId:sampleID,
     key: constants.META.RESULT.KEY,
@@ -331,9 +376,10 @@ async function updateTestResult(csvRow, qPCRPlateBC){
  * Updates PatientSample with CT values from the QuantStudio
  * @param csvRow
  * @param qPCRPlateBC
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @returns {Promise<void>}
  */
-async function updateCTValues(csvRow, qPCRPlateBC, sampleIdDict){
+async function updateCTValues(csvRow, qPCRPlateBC, metas, sampleIdDict){
   let ctN1;
   let ctN2;
   let ctRP;
@@ -382,6 +428,12 @@ async function parse_logfile(logfile){
     return;
   }
 
+  let metas = await getCovidSampleTypeMetas();
+  if (!metas){
+    process.exitCode = 8;
+    return;
+  }
+
   let sampleIdDict = {};
   let qPCRPlateBC = getqPCRPlateBC(logfile);
 
@@ -398,7 +450,7 @@ async function parse_logfile(logfile){
     })
     .on('data', (row) => {
       if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
-        lineageTracking(row);
+        lineageTracking(row, metas);
       } else {
         if (qPCRPlateBC.length === 0){
           logger.error("No qPCR plate barcode was found");
@@ -407,9 +459,9 @@ async function parse_logfile(logfile){
         }
 
         if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
-          updateCTValues(row, qPCRPlateBC, sampleIdDict);
+          updateCTValues(row, qPCRPlateBC, metas, sampleIdDict);
         } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
-          updateTestResult(row, qPCRPlateBC);
+          updateTestResult(row, qPCRPlateBC, metas);
         }
       }
 
