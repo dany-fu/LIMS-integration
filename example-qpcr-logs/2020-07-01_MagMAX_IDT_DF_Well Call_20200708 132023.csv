@@ -1,0 +1,59 @@
+# Plate File Name: F:\2020-07-01_MagMAX_IDT_DF.eds
+# Description: 
+# User Name: 
+# Last Modified Date/Time: 1969-12-31 07:00:00 PM EST
+# Date Created: 2020-07-01 07:22:17 PM EDT
+# Barcode: 
+# Instrument Type: QuantStudio™ 5 System
+# Block Type: 96-Well 0.2-mL Block
+# Instrument Name: appletini
+# Instrument Serial Number: 272523406
+# Heated Cover Serial Number: null
+# Block Serial Number: null
+# Plate Run Start Date/Time: 2020-07-02 03:35:55 AM EDT
+# Plate Run End Date/Time: 2020-07-02 05:09:37 AM EDT
+# Run Duration: 93 minutes 41 seconds
+# Sample Volume: 20.0
+# Cover Temperature: 105.0
+# PCR Stage / Cycle where Analysis is performed: Stage 2 Step 2
+# Pre-read Stage/Step: 
+# Post-read Stage/Step: 
+# Passive Reference: null
+# Quantification Cycle Method: CT
+
+"[Well Call]"
+"Well Position","Sample","Presence Targets","Absence Targets","Call","Assessment"
+"A1","Puritan NTC","","N1, N2, RP","INVALID","Recollect"
+"A2","Puritan NTC","","N1, N2, RP","INVALID","Recollect"
+"A3","Puritan NTC","","N1, N2, RP","INVALID","Recollect"
+"A4","Ora NTC","","N1, N2, RP","INVALID","Recollect"
+"A5","Ora NTC","","N1, N2, RP","INVALID","Recollect"
+"A6","Ora NTC","","N1, N2, RP","INVALID","Recollect"
+"A7","Vacuette NTC","RP","N1, N2","NEGATIVE","Negative"
+"A8","Vacuette NTC","","N1, N2, RP","INVALID","Recollect"
+"A9","Vacuette NTC","","N1, N2, RP","INVALID","Recollect"
+"A10","PCR NTC","","N1, N2, RP","INVALID","Recollect"
+"A11","PCR NTC","","N1, N2, RP","INVALID","Recollect"
+"A12","PCR NTC","","N1, N2, RP","INVALID","Recollect"
+"B1","Puritan RP","N1, N2, RP","","POSITIVE","Positive"
+"B4","Ora RP","RP","N1, N2","NEGATIVE","Negative"
+"B5","Ora RP","RP","N1, N2","NEGATIVE","Negative"
+"B6","Ora RP","","N1, N2, RP","INVALID","Recollect"
+"B7","Vacuette RP","","N1, N2, RP","INVALID","Recollect"
+"B8","Vacuette RP","RP","N1, N2","NEGATIVE","Negative"
+"B9","Vacuette RP","RP","N1, N2","NEGATIVE","Negative"
+"B10","PCR RP","RP","N1, N2","NEGATIVE","Negative"
+"B11","PCR RP","RP","N1, N2","NEGATIVE","Negative"
+"B12","PCR RP","RP","N1, N2","NEGATIVE","Negative"
+"C1","Puritan RP + N","RP","N1, N2","NEGATIVE","Negative"
+"C2","Puritan RP + N","RP","N1, N2","NEGATIVE","Negative"
+"C3","Puritan RP + N","RP","N1, N2","NEGATIVE","Negative"
+"C4","Ora RP + N","N1, N2, RP","","POSITIVE","Positive"
+"C5","Ora RP + N","N1, N2, RP","","POSITIVE","Positive"
+"C6","Ora RP + N","N1, N2, RP","","POSITIVE","Positive"
+"C7","Vacuette RP + N","N1, N2","RP","POSITIVE","Positive"
+"C8","Vacuette RP + N","N1, N2, RP","","POSITIVE","Positive"
+"C9","Vacuette RP + N","RP","N1, N2","NEGATIVE","Negative"
+"C10","PCR RP + N","N1, N2, RP","","POSITIVE","Positive"
+"C11","PCR RP + N","N1, N2, RP","","POSITIVE","Positive"
+"C12","PCR RP + N","N1, N2, RP","","POSITIVE","Positive"
