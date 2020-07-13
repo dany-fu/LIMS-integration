@@ -24,13 +24,16 @@ This repository contains code for
       - `Sample Tube Barcode`    
       - `Output Barcode`    
       - `Output Well Number `
+      - `UserName`    
       - `Reagent Names`    
       - `Reagent Lot Numbers`   
 * QuantStudio logfile format   
    - We expect the barcode to follow the string "# Barcode: "    
+   - We expect the technician's initials to follow the string "# User Name:"
    - We expect 2 additional lines between the comments and headers     
    - For Ct values, we expect the log to have the headers    
-       - `Well Position`    
+       - `Well Position`   
+       - `Target` 
        - `Cq`    
    - For Call values, we expect the log to have the headers
        - `Well Position`    
@@ -38,4 +41,33 @@ This repository contains code for
        - It must **NOT** contain the header `Cq`    
 * Existing eLabs SampleType and custom fields should not be altered
    - Expected fields are defined in `constants.js`
+   
 
+### Control Fail Procedure
+Control samples in every 384 qPCR plate are expected to have the same layout.
+
+```
+     1    |    2
+A PCR_Pos |  /
+-------------------
+B    /    |  /
+-------------------
+C  NTC_1  |  NTC_2
+-------------------
+D  NTC_3  |  NTC_4
+-------------------
+E  NEC_1  |  NEC_2
+-------------------
+F  NEC_3  |  NEC_4
+```
+* Control sample failures will show WARNING in the qPCR log
+  - If PCR Positive Control fails, all 4 96 well plates need to be re-prepped for qPCR. 
+  - IF NEC or NTC fails, all samples from the failed *plate(s)* need to have RNA re-extracted. 
+
+**Any samples that fail twice in this process are considered invalid and need to be recollected**
+
+### qPCR Plate Layout
+
+![qPCR_plate](https://user-images.githubusercontent.com/7750862/87336835-7b7a9080-c510-11ea-9b4e-a54849ea1426.png)
+
+Key: Plate 1 (Red), Plate 2 (Green), Plate 3 (Yellow), Plate 4 (Blue)
