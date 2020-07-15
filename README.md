@@ -32,11 +32,13 @@ This repository contains code for
    - We expect the technician's initials to follow the string "# User Name:"
    - We expect 2 additional lines between the comments and headers     
    - For Ct values, we expect the log to have the headers    
-       - `Well Position`   
+       - `Well Position`  
+       - `Sample`     
        - `Target` 
        - `Cq`    
    - For Call values, we expect the log to have the headers
        - `Well Position`    
+       - `Sample`     
        - `Call`    
        - It must **NOT** contain the header `Cq`    
 * Existing eLabs SampleType and custom fields should not be altered
@@ -61,10 +63,14 @@ E  NEC_1  |  NEC_2
 F  NEC_3  |  NEC_4
 ```
 * Control sample failures will show WARNING in the qPCR log
-  - If PCR Positive Control fails, all 4 96 well plates need to be re-prepped for qPCR. 
-  - IF NEC or NTC fails, all samples from the failed *plate(s)* need to have RNA re-extracted. 
-
-**Any samples that fail twice in this process are considered invalid and need to be recollected**
+    - If PCR Positive Control fails, all 4 96 well plates need to be re-prepped for qPCR. 
+    - IF NEC or NTC fails, all samples from the failed *plate(s)* need to have RNA re-extracted. 
+* Re-extraction takes precedence. 
+    - For example, if PCR_POS and NTC_1 both fail, Plate 1 needs to be re-extracted, and the other 3 
+    plates re-prepped. 
+    
+**Any samples that fail twice in this process are considered invalid and need to be recollected.
+Status is to be considered qPCR complete.**
 
 ### qPCR Plate Layout
 

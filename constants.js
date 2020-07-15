@@ -62,6 +62,13 @@ const CONTROLS = {
   NEC: "NEC_"
 };
 
+const CONTROL_WELLS = ["A1", "C1", "C2", "D1", "D2", "E1", "E2", "F1", "F2"];
+
+const PLATE384 = {
+  ROW: 16,
+  COL: 24
+};
+
 
 module.exports = {
   HAMILTON_LOG_HEADERS: HAMILTON_LOG_HEADERS,
@@ -70,5 +77,7 @@ module.exports = {
   STATUS_VAL: STATUS_VAL,
   TEST_RESULT: TEST_RESULT,
   ORIGIN_VAL: ORIGIN_VAL,
-  CONTROLS: CONTROLS
+  CONTROLS: CONTROLS,
+  CONTROL_WELLS: CONTROL_WELLS,
+  PLATE384: PLATE384
 };

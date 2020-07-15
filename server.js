@@ -49,6 +49,14 @@ function equalsIgnoringCase(text, other) {
   return text.localeCompare(other, undefined, { sensitivity: 'accent' }) === 0;
 }
 
+function isOdd(num) {
+  return num % 2 === 1;
+}
+
+function isEven(num) {
+  return num % 2 === 0;
+}
+
 function getNumAttempts(patientSample){
   return patientSample.data[0].meta.find(m => m.key === constants.META.NUM_ATTEMPTS).value;
 }
@@ -69,22 +77,6 @@ function makeSearchURIObject(metas, plateBC, wellNum){
   `}]`);
 }
 
-/**
- * Get the barcode of the plate by searching for "# Barcode: " in the QuantStudio output
- * @param logfile QuantStudio or Hamilton logfile
- * @returns {string} barcode of the qPCR plate, if found, else empty string
- */
-function getqPCRPlateBC(logfile) {
-  let barcode = "";
-  let data = fs.readFileSync(logfile, 'utf8');
-  const regex = /# Barcode: (.*)/g;
-  let found = regex.exec(data);
-  if(found){
-    barcode = found[1];
-  }
-  return barcode;
-}
-
 function stringToArray(str){
   str = str.replace(/'|"/g, "");
   return str.replace(/^\[|\]$/g, "").split(",");
@@ -92,6 +84,20 @@ function stringToArray(str){
 
 function isControl(sample){
   return Object.values(constants.CONTROLS).some(v => sample.includes(v))
+}
+
+function getWarningWells(data){
+  const regex = /(.*),.*,WARNING/g;
+  let found = [...data.matchAll(regex)];
+  if(found.length){
+    return Array.from(found, f => f[1]);
+  }
+  return null;
+}
+
+function isWellCall(data){
+  const regex = /\[Well Call\]/g;
+  return regex.exec(data);
 }
 
 
@@ -207,7 +213,10 @@ async function searchForPatienSample(metas, plateBC, wellNum){
  * @returns {Promise<void>} Sample object with all custom fields if found, else Null
  */
 async function getPatientSample(barcode){
-  let endpoint = `${config.get('endpoints.samples')}?$expand=meta&sampleTypeID=${config.get('covidSampleTypeId')}&name=${barcode}`;
+  let endpoint = `${config.get('endpoints.samples')}` +
+    `?$expand=meta&sampleTypeID=${config.get('covidSampleTypeId')}` +
+    `&name=${barcode}`;
+
   return axios.get(endpoint)
     .then((res) => {
       if(res.status === 200){
@@ -465,27 +474,73 @@ async function hamiltonTracking(csvRow, metas){
  ********************************/
 
 /**
- * Update "call" of the test, results can be POSITIVE, NEGATIVE, INVALID, INCONCLUSIVE, or WARNING
- * INVALID or INCONCLUSIVE results both require recollection of sample
- * WARNING occurs when controls failed, and can be reattempted up to 1 more time
- * If controls fail during attempt #2, a recollection is required
- * @param csvRow
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * Increases number of attempt by 1 if allowed and returns the total number of attempts
+ * @param sampleObj
+ * @param metas
+ * @returns {Promise<*>}
+ */
+async function increaseAttempt(sampleObj, metas){
+  // Check number of attempts
+  let numAttempt = getNumAttempts(sampleObj);
+
+  if (numAttempt < 2){
+    let sampleID = getSampleId(sampleObj);
+    const attemptMeta = metas.find(m => m.key === constants.META.NUM_ATTEMPTS);
+    await updateMeta({sampleId:sampleID,
+      key: constants.META.NUM_ATTEMPTS,
+      value: ++numAttempt,
+      type: attemptMeta.sampleDataType,
+      metaId: attemptMeta.sampleTypeMetaID}); //Increase number of attempts by 1
+  }
+  return numAttempt;
+}
+
+/**
+ * Updates status of failed samples
+ * @param sampleObj
+ * @param metas
+ * @param statusConst Either "Re-run qPCR" or "Re-run RNA Extraction"
  * @returns {Promise<void>}
  */
-async function updateTestResult(csvRow, metas){
-  let sampleBC = csvRow[constants.QPCR_LOG_HEADERS.SAMPLE];
-  if (isControl(sampleBC)) {
-    return;
-  }
-
-  let sampleObj = await getPatientSample(sampleBC);
-  if(!sampleObj){
-    process.exitCode = 8;
-    return;
-  }
+async function updateFailed(sampleObj, metas, statusConst){
   let sampleID = getSampleId(sampleObj);
-  let call = csvRow[constants.QPCR_LOG_HEADERS.CALL];
+  let numAttempt = await increaseAttempt(sampleObj, metas);
+
+  // If it's less than 2, we can rerun
+  if (numAttempt < 2){
+    const result = metas.find(m => m.key === constants.META.RESULT);
+    updateMeta({sampleId:sampleID,
+      key: constants.META.RESULT,
+      value: constants.TEST_RESULT.WARNING,
+      type: result.sampleDataType,
+      metaId: result.sampleTypeMetaID}); //update Test Result to "Control Failed"
+
+    const status = metas.find(m => m.key === constants.META.STATUS);
+    updateMeta({sampleId:sampleID,
+      key: constants.META.STATUS,
+      value: statusConst,
+      type: status.sampleDataType,
+      metaId: status.sampleTypeMetaID}); // Update status to re-prep or re-extract
+  } else {
+    const result = metas.find(m => m.key === constants.META.RESULT);
+    updateMeta({sampleId:sampleID,
+      key: constants.META.RESULT,
+      value: constants.TEST_RESULT.INVALID,
+      type: result.sampleDataType,
+      metaId: result.sampleTypeMetaID}); //Update Test Result to "Invalid - recollect"
+
+    const status = metas.find(m => m.key === constants.META.STATUS);
+    updateMeta({sampleId:sampleID,
+      key: constants.META.STATUS,
+      value: constants.STATUS_VAL.QPCR_DONE,
+      type: status.sampleDataType,
+      metaId: status.sampleTypeMetaID}); //update status to "qPCR Complete"
+  }
+}
+
+async function updatePassed(sampleObj, metas, call){
+  let sampleID = getSampleId(sampleObj);
+  increaseAttempt(sampleObj, metas);
 
   const result = metas.find(m => m.key === constants.META.RESULT);
   updateMeta({sampleId:sampleID,
@@ -501,15 +556,36 @@ async function updateTestResult(csvRow, metas){
     value: constants.STATUS_VAL.QPCR_DONE,
     type: status.sampleDataType,
     metaId: status.sampleTypeMetaID}); //update status to "qPCR Complete"
+}
 
-  let numAttempt = getNumAttempts(sampleObj);
-  if (numAttempt < 2){
-    const attemptMeta = metas.find(m => m.key === constants.META.NUM_ATTEMPTS);
-    updateMeta({sampleId:sampleID,
-      key: constants.META.NUM_ATTEMPTS,
-      value: ++numAttempt,
-      type: attemptMeta.sampleDataType,
-      metaId: attemptMeta.sampleTypeMetaID}); //Increase number of attempts by 1, if allowed
+/**
+ * Update "call" of the test, results can be POSITIVE, NEGATIVE, INVALID, INCONCLUSIVE, or WARNING
+ * INVALID or INCONCLUSIVE results both require recollection of sample
+ * WARNING occurs when controls failed, and can be reattempted up to 1 more time
+ * If controls fail during attempt #2, a recollection is required
+ * @param csvRow
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param failedWells Dictionary of all possible failed wells and their respective status
+ * @returns {Promise<void>}
+ */
+async function updateTestResult(csvRow, metas, failedWells){
+  let sampleBC = csvRow[constants.QPCR_LOG_HEADERS.SAMPLE];
+  if (isControl(sampleBC)) {
+    return;
+  }
+
+  let sampleObj = await getPatientSample(sampleBC);
+  if(!sampleObj){
+    process.exitCode = 8;
+    return;
+  }
+
+  let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
+  if (wellNum in failedWells){
+    updateFailed(sampleObj, metas, failedWells[wellNum]);
+  } else {
+    let call = csvRow[constants.QPCR_LOG_HEADERS.CALL];
+    updatePassed(sampleObj, metas, call)
   }
 }
 
@@ -530,6 +606,7 @@ async function updateCTValues(csvRow, metas){
     process.exitCode = 8;
     return;
   }
+
   let sampleID = getSampleId(sampleObj);
   let target = csvRow[constants.QPCR_LOG_HEADERS.TARGET];
   let cq = csvRow[constants.QPCR_LOG_HEADERS.CQ];
@@ -541,7 +618,78 @@ async function updateCTValues(csvRow, metas){
     metaId: targetMeta.sampleTypeMetaID}); //update CT value
 }
 
-async function parse_logfile(logfile){
+/**
+ * Creates a dictionary of all *possible* wells in a 384 that match a failed control
+ * PCR_POS failure means all samples need to be re-prepped
+ * NTC/NEC failures mean that specific plate needs to be re-extracted (takes precedence)
+ * @param failedControls Array of control names that failed (warning)
+ * @returns {*} key: well position, value: status
+ */
+function getFailureWells(failedControls){
+  let failedWells = {};
+  for(let failed of failedControls){
+    if(!constants.CONTROL_WELLS.includes(failed)){
+      logger.error(`${failed} is not a valid Control well`);
+      return null;
+    }
+
+    const plateRows = new Array( constants.PLATE384.ROW ).fill(1).map( (_, i) => String.fromCharCode(65 + i));
+    const plateCols = Array.from(Array(constants.PLATE384.COL), (_, i) => (i + 1).toString());
+
+    if(failed === constants.CONTROL_WELLS[0]){
+      // re-prep all the wells on the plate
+      for (let i = 0; i < plateRows.length; i++) {
+        for (let j = 0; j < plateCols.length; j++) {
+          failedWells[`${plateRows[i]}${plateCols[j]}`] = constants.STATUS_VAL.RE_QPCR;
+        }
+      }
+    } else{
+      let rIndex = plateRows.indexOf(failed[0]);
+      let cIndex = plateCols.indexOf(failed[1]);
+      let failedRows = isOdd(rIndex) ? plateRows.filter((_,i)=>isOdd(i)) : plateRows.filter((_,i)=>isEven(i));
+      let failedCols = isOdd(cIndex) ? plateCols.filter((_,i)=>isOdd(i)) : plateCols.filter((_,i)=>isEven(i));
+      for (let i = 0; i < failedRows.length; i++) {
+        for (let j = 0; j < failedCols.length; j++) {
+          failedWells[`${failedRows[i]}${failedCols[j]}`] = constants.STATUS_VAL.RE_EXTRACT;
+        }
+      }
+    }
+  }
+
+  return failedWells;
+}
+
+/**
+ *
+ * @param logfile Output from Hamilton or QuantStudio
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param failedWells Dictionary of all possible failed wells and their respective status
+ */
+function parseCSV(logfile, metas, failedWells){
+  let readStream = fs.createReadStream(logfile);
+  readStream.pipe(csv.parse({
+    headers:true,
+    comment:"#", //ignore lines that begin with #
+    skipLines:2 })
+  )
+    .on('data', (row) => {
+      if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
+        hamiltonTracking(row, metas);
+      } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
+        updateCTValues(row, metas);
+      } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
+        updateTestResult(row, metas, failedWells);
+      }
+    })
+    .on('error', (error) => {
+      logger.error(error);
+      process.exitCode = 8;
+      readStream.destroy();
+    })
+    .on('end', (rowCount) => logger.info(`Parsed ${rowCount} records`));
+}
+
+async function main(logfile){
   logger.info(logfile);
 
   let auth = await login();
@@ -557,33 +705,28 @@ async function parse_logfile(logfile){
     return;
   }
 
-  let readStream = fs.createReadStream(logfile);
-  readStream.pipe(csv.parse({
-      headers:true,
-      comment:"#", //ignore lines that begin with #
-      skipLines:2 })
-    )
-    .on('error', (error) => {
-      logger.error(error);
-      process.exitCode = 8;
-      readStream.destroy();
-    })
-    .on('data', (row) => {
-      if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
-        hamiltonTracking(row, metas);
-      } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
-        updateCTValues(row, metas);
-      } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
-        updateTestResult(row, metas);
-      }
-    })
-    .on('end', (rowCount) => logger.info(`Parsed ${rowCount} records`));
+  let fileData = fs.readFileSync(logfile, 'utf8');
+  let failedWells = {};
+  if (isWellCall(fileData)){  // look for control failures
+    let failedControls = getWarningWells(fileData);
+    if(failedControls){
+      logger.info(`Failed controls ${failedControls}`);
+      failedWells = getFailureWells(failedControls);
+    }
+  }
+
+  if (!failedWells){
+    process.exitCode = 8;
+    return;
+  }
+
+  parseCSV(logfile, metas, failedWells);
 }
 
 /**
  * file: path of the CSV file to be parsed
  */
-parse_logfile(argv.file);
+main(argv.file);
 process.on('exit', (code) => {
   console.log(`Exited with code ${code}`);
   logger.info(`Process exit event with code:${code}`);
