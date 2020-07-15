@@ -50,10 +50,18 @@ const HAMILTON_LOG_HEADERS = {
 
 const QPCR_LOG_HEADERS = {
   WELL: "Well Position",
+  SAMPLE: "Sample",
   CALL: "Call",
   TARGET: "Target",
   CQ: "Cq"
 };
+
+const CONTROLS = {
+  PCR_POS: "PCR_POS",
+  NTC: "NTC_",
+  NEC: "NEC_"
+};
+
 
 module.exports = {
   HAMILTON_LOG_HEADERS: HAMILTON_LOG_HEADERS,
@@ -61,5 +69,6 @@ module.exports = {
   META: META,
   STATUS_VAL: STATUS_VAL,
   TEST_RESULT: TEST_RESULT,
-  ORIGIN_VAL: ORIGIN_VAL
+  ORIGIN_VAL: ORIGIN_VAL,
+  CONTROLS: CONTROLS
 };

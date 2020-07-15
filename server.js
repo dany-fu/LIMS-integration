@@ -90,6 +90,10 @@ function stringToArray(str){
   return str.replace(/^\[|\]$/g, "").split(",");
 }
 
+function isControl(sample){
+  return Object.values(constants.CONTROLS).some(v => sample.includes(v))
+}
+
 
 /******************
  * ELABS API CALLS
@@ -466,18 +470,20 @@ async function hamiltonTracking(csvRow, metas){
  * WARNING occurs when controls failed, and can be reattempted up to 1 more time
  * If controls fail during attempt #2, a recollection is required
  * @param csvRow
- * @param qPCRPlateBC
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @returns {Promise<void>}
  */
-async function updateTestResult(csvRow, qPCRPlateBC, metas){
-  let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
-  let sampleObj = await searchForPatienSample(metas, qPCRPlateBC, wellNum);
+async function updateTestResult(csvRow, metas){
+  let sampleBC = csvRow[constants.QPCR_LOG_HEADERS.SAMPLE];
+  if (isControl(sampleBC)) {
+    return;
+  }
+
+  let sampleObj = await getPatientSample(sampleBC);
   if(!sampleObj){
     process.exitCode = 8;
     return;
   }
-
   let sampleID = getSampleId(sampleObj);
   let call = csvRow[constants.QPCR_LOG_HEADERS.CALL];
 
@@ -510,29 +516,23 @@ async function updateTestResult(csvRow, qPCRPlateBC, metas){
 /**
  * Updates PatientSample with CT values from the QuantStudio
  * @param csvRow
- * @param qPCRPlateBC
  * @param metas Array of meta fields associated with the COVID-19 SampleType
- * @param sampleIdDict Mapping of well num to sample id
  * @returns {Promise<void>}
  */
-async function updateCTValues(csvRow, qPCRPlateBC, metas, sampleIdDict){
-  let sampleID;
-  let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
-  if (wellNum in sampleIdDict){
-    sampleID = sampleIdDict[wellNum];
-  } else {
-    let sampleObj = await searchForPatienSample(metas, qPCRPlateBC, wellNum);
-    if(!sampleObj){
-      process.exitCode = 8;
-      return;
-    }
-    sampleID = getSampleId(sampleObj);
-    sampleIdDict[wellNum] = sampleID;
+async function updateCTValues(csvRow, metas){
+  let sampleBC = csvRow[constants.QPCR_LOG_HEADERS.SAMPLE];
+  if (isControl(sampleBC)) {
+    return;
   }
 
+  let sampleObj = await getPatientSample(sampleBC);
+  if(!sampleObj){
+    process.exitCode = 8;
+    return;
+  }
+  let sampleID = getSampleId(sampleObj);
   let target = csvRow[constants.QPCR_LOG_HEADERS.TARGET];
   let cq = csvRow[constants.QPCR_LOG_HEADERS.CQ];
-
   const targetMeta = metas.find(m => m.key === constants.META[target]);
   updateMeta({sampleId:sampleID,
     key: constants.META[target],
@@ -557,9 +557,6 @@ async function parse_logfile(logfile){
     return;
   }
 
-  let sampleIdDict = {};
-  let qPCRPlateBC = getqPCRPlateBC(logfile);
-
   let readStream = fs.createReadStream(logfile);
   readStream.pipe(csv.parse({
       headers:true,
@@ -574,21 +571,11 @@ async function parse_logfile(logfile){
     .on('data', (row) => {
       if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
         hamiltonTracking(row, metas);
-      } else {
-        if (qPCRPlateBC.length === 0){
-          logger.error("No qPCR plate barcode was found");
-          process.exitCode = 8;
-          readStream.destroy();
-          return;
-        }
-
-        if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
-          updateCTValues(row, qPCRPlateBC, metas, sampleIdDict);
-        } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
-          updateTestResult(row, qPCRPlateBC, metas);
-        }
+      } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
+        updateCTValues(row, metas);
+      } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
+        updateTestResult(row, metas);
       }
-
     })
     .on('end', (rowCount) => logger.info(`Parsed ${rowCount} records`));
 }

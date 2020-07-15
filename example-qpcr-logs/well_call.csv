@@ -1,0 +1,406 @@
+# Plate File Name: F:\QuantStudio\2020-07-11 AUTOMATED EXTRACTION PLATE 2.eds
+# Description: 
+# User Name: JMR
+# Last Modified Date/Time: 1969-12-31 07:00:00 PM EST
+# Date Created: 2020-07-11 02:44:37 PM EDT
+# Barcode: H3K006LC
+# Instrument Type: QuantStudio™ 7 System
+# Block Type: 384-Well Block
+# Instrument Name: 278872955
+# Instrument Serial Number: 278872955
+# Heated Cover Serial Number: null
+# Block Serial Number: null
+# Plate Run Start Date/Time: 2020-07-11 03:52:04 PM EDT
+# Plate Run End Date/Time: 2020-07-11 05:25:46 PM EDT
+# Run Duration: 93 minutes 41 seconds
+# Sample Volume: 20.0
+# Cover Temperature: 105.0
+# PCR Stage / Cycle where Analysis is performed: Stage 2 Step 2
+# Pre-read Stage/Step: 
+# Post-read Stage/Step: 
+# Passive Reference: null
+# Quantification Cycle Method: CT
+
+[Well Call]
+Well Position,Sample,Call,Assessment
+A1,PCR_POS,POSITIVE,PCR Positive Control Passed
+A3,Plate_1,POSITIVE,Sample is presumed positive
+A4,Plate_2,INVALID,Recollect
+A5,Plate_1,INVALID,Recollect
+A6,Plate_2,INVALID,Recollect
+A7,Plate_1,INVALID,Recollect
+A8,Plate_2,INVALID,Recollect
+A9,Plate_1,INVALID,Recollect
+A10,Plate_2,INVALID,Recollect
+A11,Plate_1,INVALID,Recollect
+A12,Plate_2,INVALID,Recollect
+A13,Plate_1,INVALID,Recollect
+A14,Plate_2,INVALID,Recollect
+A15,Plate_1,INVALID,Recollect
+A16,Plate_2,INVALID,Recollect
+A17,Plate_1,INVALID,Recollect
+A18,Plate_2,INVALID,Recollect
+A19,Plate_1,INVALID,Recollect
+A20,Plate_2,INVALID,Recollect
+A21,Plate_1,INVALID,Recollect
+A22,Plate_2,INVALID,Recollect
+A23,Plate_1,INVALID,Recollect
+A24,Plate_2,INVALID,Recollect
+B3,Plate_3,INVALID,Recollect
+B4,Plate_4,INVALID,Recollect
+B5,Plate_3,INVALID,Recollect
+B6,Plate_4,INVALID,Recollect
+B7,Plate_3,INVALID,Recollect
+B8,Plate_4,INVALID,Recollect
+B9,Plate_3,INVALID,Recollect
+B10,Plate_4,INVALID,Recollect
+B11,Plate_3,INVALID,Recollect
+B12,Plate_4,INVALID,Recollect
+B13,Plate_3,INVALID,Recollect
+B14,Plate_4,INVALID,Recollect
+B15,Plate_3,INVALID,Recollect
+B16,Plate_4,INVALID,Recollect
+B17,Plate_3,INVALID,Recollect
+B18,Plate_4,INVALID,Recollect
+B19,Plate_3,INVALID,Recollect
+B20,Plate_4,INVALID,Recollect
+B21,Plate_3,INVALID,Recollect
+B22,Plate_4,INVALID,Recollect
+B23,Plate_3,INVALID,Recollect
+B24,Plate_4,INVALID,Recollect
+C1,NTC_1,NEGATIVE,Extraction NTC Passed
+C2,NTC_2,NEGATIVE,Extraction NTC Passed
+C3,Plate_1,NEGATIVE,Sample is presumed negative
+C4,Plate_2,INVALID,Recollect
+C5,Plate_1,INVALID,Recollect
+C6,Plate_2,INVALID,Recollect
+C7,Plate_1,INVALID,Recollect
+C8,Plate_2,INVALID,Recollect
+C9,Plate_1,INVALID,Recollect
+C10,Plate_2,INVALID,Recollect
+C11,Plate_1,INVALID,Recollect
+C12,Plate_2,INVALID,Recollect
+C13,Plate_1,INVALID,Recollect
+C14,Plate_2,INVALID,Recollect
+C15,Plate_1,INVALID,Recollect
+C16,Plate_2,INVALID,Recollect
+C17,Plate_1,INVALID,Recollect
+C18,Plate_2,INVALID,Recollect
+C19,Plate_1,INVALID,Recollect
+C20,Plate_2,INVALID,Recollect
+C21,Plate_1,INVALID,Recollect
+C22,Plate_2,INVALID,Recollect
+C23,Plate_1,INVALID,Recollect
+C24,Plate_2,INVALID,Recollect
+D1,NTC_3,NEGATIVE,Extraction NTC Passed
+D2,NTC_4,NEGATIVE,Extraction NTC Passed
+D3,Plate_3,INVALID,Recollect
+D4,Plate_4,INVALID,Recollect
+D5,Plate_3,INVALID,Recollect
+D6,Plate_4,INVALID,Recollect
+D7,Plate_3,INVALID,Recollect
+D8,Plate_4,INVALID,Recollect
+D9,Plate_3,INVALID,Recollect
+D10,Plate_4,INVALID,Recollect
+D11,Plate_3,INVALID,Recollect
+D12,Plate_4,INVALID,Recollect
+D13,Plate_3,INVALID,Recollect
+D14,Plate_4,INVALID,Recollect
+D15,Plate_3,INVALID,Recollect
+D16,Plate_4,INVALID,Recollect
+D17,Plate_3,INVALID,Recollect
+D18,Plate_4,INVALID,Recollect
+D19,Plate_3,INVALID,Recollect
+D20,Plate_4,INVALID,Recollect
+D21,Plate_3,INVALID,Recollect
+D22,Plate_4,INVALID,Recollect
+D23,Plate_3,INVALID,Recollect
+D24,Plate_4,INVALID,Recollect
+E1,NEC_1,WARNING,Extraction NEC Failed RP
+E2,NEC_2,WARNING,Extraction NEC Failed RP
+E3,Plate_1,NEGATIVE,Sample is presumed negative
+E4,Plate_2,INVALID,Recollect
+E5,Plate_1,INVALID,Recollect
+E6,Plate_2,INVALID,Recollect
+E7,Plate_1,INVALID,Recollect
+E8,Plate_2,INVALID,Recollect
+E9,Plate_1,INVALID,Recollect
+E10,Plate_2,INVALID,Recollect
+E11,Plate_1,INVALID,Recollect
+E12,Plate_2,INVALID,Recollect
+E13,Plate_1,INVALID,Recollect
+E14,Plate_2,INVALID,Recollect
+E15,Plate_1,INVALID,Recollect
+E16,Plate_2,INVALID,Recollect
+E17,Plate_1,INVALID,Recollect
+E18,Plate_2,INVALID,Recollect
+E19,Plate_1,INVALID,Recollect
+E20,Plate_2,INVALID,Recollect
+E21,Plate_1,INVALID,Recollect
+E22,Plate_2,INVALID,Recollect
+E23,Plate_1,INVALID,Recollect
+E24,Plate_2,INVALID,Recollect
+F1,NEC_3,WARNING,Extraction NEC Failed RP
+F2,NEC_4,WARNING,Extraction NEC Failed RP
+F3,Plate_3,INVALID,Recollect
+F4,Plate_4,INVALID,Recollect
+F5,Plate_3,INVALID,Recollect
+F6,Plate_4,INVALID,Recollect
+F7,Plate_3,INVALID,Recollect
+F8,Plate_4,INVALID,Recollect
+F9,Plate_3,INVALID,Recollect
+F10,Plate_4,INVALID,Recollect
+F11,Plate_3,INVALID,Recollect
+F12,Plate_4,INVALID,Recollect
+F13,Plate_3,INVALID,Recollect
+F14,Plate_4,INVALID,Recollect
+F15,Plate_3,INVALID,Recollect
+F16,Plate_4,INVALID,Recollect
+F17,Plate_3,INVALID,Recollect
+F18,Plate_4,INVALID,Recollect
+F19,Plate_3,INVALID,Recollect
+F20,Plate_4,INVALID,Recollect
+F21,Plate_3,INVALID,Recollect
+F22,Plate_4,INVALID,Recollect
+F23,Plate_3,INVALID,Recollect
+F24,Plate_4,INVALID,Recollect
+G1,Plate_1,POSITIVE,Sample is presumed positive
+G2,Plate_2,INVALID,Recollect
+G3,Plate_1,INVALID,Recollect
+G4,Plate_2,INVALID,Recollect
+G5,Plate_1,INVALID,Recollect
+G6,Plate_2,INVALID,Recollect
+G7,Plate_1,INVALID,Recollect
+G8,Plate_2,INVALID,Recollect
+G9,Plate_1,INVALID,Recollect
+G10,Plate_2,INVALID,Recollect
+G11,Plate_1,INVALID,Recollect
+G12,Plate_2,INVALID,Recollect
+G13,Plate_1,INVALID,Recollect
+G14,Plate_2,INVALID,Recollect
+G15,Plate_1,INVALID,Recollect
+G16,Plate_2,INVALID,Recollect
+G17,Plate_1,INVALID,Recollect
+G18,Plate_2,INVALID,Recollect
+G19,Plate_1,INVALID,Recollect
+G20,Plate_2,INVALID,Recollect
+G21,Plate_1,INVALID,Recollect
+G22,Plate_2,INVALID,Recollect
+G23,Plate_1,INVALID,Recollect
+G24,Plate_2,INVALID,Recollect
+H1,Plate_3,INVALID,Recollect
+H2,Plate_4,INVALID,Recollect
+H3,Plate_3,INVALID,Recollect
+H4,Plate_4,INVALID,Recollect
+H5,Plate_3,INVALID,Recollect
+H6,Plate_4,INVALID,Recollect
+H7,Plate_3,INVALID,Recollect
+H8,Plate_4,INVALID,Recollect
+H9,Plate_3,INVALID,Recollect
+H10,Plate_4,INVALID,Recollect
+H11,Plate_3,INVALID,Recollect
+H12,Plate_4,INVALID,Recollect
+H13,Plate_3,INVALID,Recollect
+H14,Plate_4,INVALID,Recollect
+H15,Plate_3,INVALID,Recollect
+H16,Plate_4,INVALID,Recollect
+H17,Plate_3,INVALID,Recollect
+H18,Plate_4,INVALID,Recollect
+H19,Plate_3,INVALID,Recollect
+H20,Plate_4,INVALID,Recollect
+H21,Plate_3,INVALID,Recollect
+H22,Plate_4,INVALID,Recollect
+H23,Plate_3,INVALID,Recollect
+H24,Plate_4,INVALID,Recollect
+I1,Plate_1,POSITIVE,Sample is presumed positive
+I2,Plate_2,INVALID,Recollect
+I3,Plate_1,INVALID,Recollect
+I4,Plate_2,INVALID,Recollect
+I5,Plate_1,INVALID,Recollect
+I6,Plate_2,INVALID,Recollect
+I7,Plate_1,INVALID,Recollect
+I8,Plate_2,INVALID,Recollect
+I9,Plate_1,INVALID,Recollect
+I10,Plate_2,INVALID,Recollect
+I11,Plate_1,INVALID,Recollect
+I12,Plate_2,INVALID,Recollect
+I13,Plate_1,INVALID,Recollect
+I14,Plate_2,INVALID,Recollect
+I15,Plate_1,INVALID,Recollect
+I16,Plate_2,INVALID,Recollect
+I17,Plate_1,INVALID,Recollect
+I18,Plate_2,INVALID,Recollect
+I19,Plate_1,INVALID,Recollect
+I20,Plate_2,INVALID,Recollect
+I21,Plate_1,INVALID,Recollect
+I22,Plate_2,INVALID,Recollect
+I23,Plate_1,INVALID,Recollect
+I24,Plate_2,INVALID,Recollect
+J1,Plate_3,INVALID,Recollect
+J2,Plate_4,INVALID,Recollect
+J3,Plate_3,INVALID,Recollect
+J4,Plate_4,INVALID,Recollect
+J5,Plate_3,INVALID,Recollect
+J6,Plate_4,INVALID,Recollect
+J7,Plate_3,INVALID,Recollect
+J8,Plate_4,INVALID,Recollect
+J9,Plate_3,INVALID,Recollect
+J10,Plate_4,INVALID,Recollect
+J11,Plate_3,INVALID,Recollect
+J12,Plate_4,INVALID,Recollect
+J13,Plate_3,INVALID,Recollect
+J14,Plate_4,INVALID,Recollect
+J15,Plate_3,INVALID,Recollect
+J16,Plate_4,INVALID,Recollect
+J17,Plate_3,INVALID,Recollect
+J18,Plate_4,INVALID,Recollect
+J19,Plate_3,INVALID,Recollect
+J20,Plate_4,INVALID,Recollect
+J21,Plate_3,INVALID,Recollect
+J22,Plate_4,INVALID,Recollect
+J23,Plate_3,INVALID,Recollect
+J24,Plate_4,INVALID,Recollect
+K1,Plate_1,POSITIVE,Sample is presumed positive
+K2,Plate_2,INVALID,Recollect
+K3,Plate_1,INVALID,Recollect
+K4,Plate_2,INVALID,Recollect
+K5,Plate_1,INVALID,Recollect
+K6,Plate_2,INVALID,Recollect
+K7,Plate_1,INVALID,Recollect
+K8,Plate_2,INVALID,Recollect
+K9,Plate_1,INVALID,Recollect
+K10,Plate_2,INVALID,Recollect
+K11,Plate_1,INVALID,Recollect
+K12,Plate_2,INVALID,Recollect
+K13,Plate_1,INVALID,Recollect
+K14,Plate_2,INVALID,Recollect
+K15,Plate_1,INVALID,Recollect
+K16,Plate_2,INVALID,Recollect
+K17,Plate_1,INVALID,Recollect
+K18,Plate_2,INVALID,Recollect
+K19,Plate_1,INVALID,Recollect
+K20,Plate_2,INVALID,Recollect
+K21,Plate_1,INVALID,Recollect
+K22,Plate_2,INVALID,Recollect
+K23,Plate_1,INVALID,Recollect
+K24,Plate_2,INVALID,Recollect
+L1,Plate_3,INVALID,Recollect
+L2,Plate_4,INVALID,Recollect
+L3,Plate_3,INVALID,Recollect
+L4,Plate_4,INVALID,Recollect
+L5,Plate_3,INVALID,Recollect
+L6,Plate_4,INVALID,Recollect
+L7,Plate_3,INVALID,Recollect
+L8,Plate_4,INVALID,Recollect
+L9,Plate_3,INVALID,Recollect
+L10,Plate_4,INVALID,Recollect
+L11,Plate_3,INVALID,Recollect
+L12,Plate_4,INVALID,Recollect
+L13,Plate_3,INVALID,Recollect
+L14,Plate_4,INVALID,Recollect
+L15,Plate_3,INVALID,Recollect
+L16,Plate_4,INVALID,Recollect
+L17,Plate_3,INVALID,Recollect
+L18,Plate_4,INVALID,Recollect
+L19,Plate_3,INVALID,Recollect
+L20,Plate_4,INVALID,Recollect
+L21,Plate_3,INVALID,Recollect
+L22,Plate_4,INVALID,Recollect
+L23,Plate_3,INVALID,Recollect
+L24,Plate_4,INVALID,Recollect
+M1,Plate_1,NEGATIVE,Sample is presumed negative
+M2,Plate_2,INVALID,Recollect
+M3,Plate_1,INVALID,Recollect
+M4,Plate_2,INVALID,Recollect
+M5,Plate_1,INVALID,Recollect
+M6,Plate_2,INVALID,Recollect
+M7,Plate_1,INVALID,Recollect
+M8,Plate_2,INVALID,Recollect
+M9,Plate_1,INVALID,Recollect
+M10,Plate_2,INVALID,Recollect
+M11,Plate_1,INVALID,Recollect
+M12,Plate_2,INVALID,Recollect
+M13,Plate_1,INVALID,Recollect
+M14,Plate_2,INVALID,Recollect
+M15,Plate_1,INVALID,Recollect
+M16,Plate_2,INVALID,Recollect
+M17,Plate_1,INVALID,Recollect
+M18,Plate_2,INVALID,Recollect
+M19,Plate_1,INVALID,Recollect
+M20,Plate_2,INVALID,Recollect
+M21,Plate_1,INVALID,Recollect
+M22,Plate_2,INVALID,Recollect
+M23,Plate_1,INVALID,Recollect
+M24,Plate_2,INVALID,Recollect
+N1,Plate_3,INVALID,Recollect
+N2,Plate_4,INVALID,Recollect
+N3,Plate_3,INVALID,Recollect
+N4,Plate_4,INVALID,Recollect
+N5,Plate_3,INVALID,Recollect
+N6,Plate_4,INVALID,Recollect
+N7,Plate_3,INVALID,Recollect
+N8,Plate_4,INVALID,Recollect
+N9,Plate_3,INVALID,Recollect
+N10,Plate_4,INVALID,Recollect
+N11,Plate_3,INVALID,Recollect
+N12,Plate_4,INVALID,Recollect
+N13,Plate_3,INVALID,Recollect
+N14,Plate_4,INVALID,Recollect
+N15,Plate_3,INVALID,Recollect
+N16,Plate_4,INVALID,Recollect
+N17,Plate_3,INVALID,Recollect
+N18,Plate_4,INVALID,Recollect
+N19,Plate_3,INVALID,Recollect
+N20,Plate_4,INVALID,Recollect
+N21,Plate_3,INVALID,Recollect
+N22,Plate_4,INVALID,Recollect
+N23,Plate_3,INVALID,Recollect
+N24,Plate_4,INVALID,Recollect
+O1,Plate_1,POSITIVE,Sample is presumed positive
+O2,Plate_2,INVALID,Recollect
+O3,Plate_1,INVALID,Recollect
+O4,Plate_2,INVALID,Recollect
+O5,Plate_1,INVALID,Recollect
+O6,Plate_2,INVALID,Recollect
+O7,Plate_1,INVALID,Recollect
+O8,Plate_2,INVALID,Recollect
+O9,Plate_1,INVALID,Recollect
+O10,Plate_2,INVALID,Recollect
+O11,Plate_1,INVALID,Recollect
+O12,Plate_2,INVALID,Recollect
+O13,Plate_1,INVALID,Recollect
+O14,Plate_2,INVALID,Recollect
+O15,Plate_1,INVALID,Recollect
+O16,Plate_2,INVALID,Recollect
+O17,Plate_1,INVALID,Recollect
+O18,Plate_2,INVALID,Recollect
+O19,Plate_1,INVALID,Recollect
+O20,Plate_2,INVALID,Recollect
+O21,Plate_1,INVALID,Recollect
+O22,Plate_2,INVALID,Recollect
+O23,Plate_1,INVALID,Recollect
+O24,Plate_2,INVALID,Recollect
+P1,Plate_3,INVALID,Recollect
+P2,Plate_4,INVALID,Recollect
+P3,Plate_3,INVALID,Recollect
+P4,Plate_4,INVALID,Recollect
+P5,Plate_3,INVALID,Recollect
+P6,Plate_4,INVALID,Recollect
+P7,Plate_3,INVALID,Recollect
+P8,Plate_4,INVALID,Recollect
+P9,Plate_3,INVALID,Recollect
+P10,Plate_4,INVALID,Recollect
+P11,Plate_3,INVALID,Recollect
+P12,Plate_4,INVALID,Recollect
+P13,Plate_3,INVALID,Recollect
+P14,Plate_4,INVALID,Recollect
+P15,Plate_3,INVALID,Recollect
+P16,Plate_4,INVALID,Recollect
+P17,Plate_3,INVALID,Recollect
+P18,Plate_4,INVALID,Recollect
+P19,Plate_3,INVALID,Recollect
+P20,Plate_4,INVALID,Recollect
+P21,Plate_3,INVALID,Recollect
+P22,Plate_4,INVALID,Recollect
+P23,Plate_3,INVALID,Recollect
+P24,Plate_4,INVALID,Recollect
