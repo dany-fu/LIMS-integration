@@ -100,6 +100,15 @@ function isWellCall(data){
   return regex.exec(data);
 }
 
+function getqPCRUser(data) {
+  const regex = /# User Name: (.*)/g;
+  let found = regex.exec(data);
+  if(found){
+    return found[1];
+  }
+  return null;
+}
+
 
 /******************
  * ELABS API CALLS
@@ -284,10 +293,11 @@ async function getCovidSampleTypeMetas(){
  * @param sampleID Unique ID of the sample in eLabs
  * @param destBC
  * @param destWellNum
+ * @param user Technician initials
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @returns {Promise<void>}
  */
-async function samplePrepTracking(sampleID, destBC, destWellNum, metas){
+async function samplePrepTracking(sampleID, destBC, destWellNum, user, metas){
 
   const dwBC = metas.find(m => m.key === constants.META.DEEPWELL_BC);
   updateMeta({sampleId:sampleID,
@@ -309,6 +319,13 @@ async function samplePrepTracking(sampleID, destBC, destWellNum, metas){
     value: constants.STATUS_VAL.SAMPLE_PREP_DONE,
     type: status.sampleDataType,
     metaId: status.sampleTypeMetaID}); //update status to "Sample Transferred To 96-Well Plate"
+
+  const userMeta = metas.find(meta => meta.key === constants.META.SAMPLE_PREP_TECH);
+  updateMeta({sampleId:sampleID,
+    key: constants.META.SAMPLE_PREP_TECH,
+    value: user,
+    type: userMeta.sampleDataType,
+    metaId: userMeta.sampleTypeMetaID}); //update initials of "Sample Aliquot User"
 }
 
 /**
@@ -317,10 +334,11 @@ async function samplePrepTracking(sampleID, destBC, destWellNum, metas){
  * @param sampleID Unique ID of the sample in eLabs
  * @param destBC
  * @param destWellNum
+ * @param user Technician initials
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @returns {Promise<void>}
  */
-async function rnaExtractionTracking(sampleID, destBC, destWellNum, metas){
+async function rnaExtractionTracking(sampleID, destBC, destWellNum, user, metas){
 
   const rnaBC = metas.find(m => m.key === constants.META.RNA_PLATE_BC);
   updateMeta({sampleId:sampleID,
@@ -342,6 +360,13 @@ async function rnaExtractionTracking(sampleID, destBC, destWellNum, metas){
     value: constants.STATUS_VAL.RNA_DONE,
     type: status.sampleDataType,
     metaId: status.sampleTypeMetaID}); //update status to "RNA Extracted"
+
+  const userMeta = metas.find(meta => meta.key === constants.META.EXTRACTION_TECH);
+  updateMeta({sampleId:sampleID,
+    key: constants.META.EXTRACTION_TECH,
+    value: user,
+    type: userMeta.sampleDataType,
+    metaId: userMeta.sampleTypeMetaID}); //update initials of "RNA Extraction User"
 }
 
 /**
@@ -350,10 +375,11 @@ async function rnaExtractionTracking(sampleID, destBC, destWellNum, metas){
  * @param sampleID Unique ID of the sample in eLabs
  * @param destBC
  * @param destWellNum
+ * @param user Technician initials
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @returns {Promise<void>}
  */
-function qPCRPrepTracking(sampleID, destBC, destWellNum, metas){
+function qPCRPrepTracking(sampleID, destBC, destWellNum, user, metas){
 
   const pcrBC = metas.find(m => m.key === constants.META.QPCR_PLATE_BC);
   updateMeta({sampleId:sampleID,
@@ -375,6 +401,13 @@ function qPCRPrepTracking(sampleID, destBC, destWellNum, metas){
     value: constants.STATUS_VAL.QPCR_PREP_DONE,
     type: status.sampleDataType,
     metaId: status.sampleTypeMetaID}); //update status to "qPCR Reactions Prepared"
+
+  const userMeta = metas.find(meta => meta.key === constants.META.QPCR_PREP_TECH);
+  updateMeta({sampleId:sampleID,
+    key: constants.META.QPCR_PREP_TECH,
+    value: user,
+    type: userMeta.sampleDataType,
+    metaId: userMeta.sampleTypeMetaID}); //update initials of "qPCR Prep User"
 }
 
 /**
@@ -415,19 +448,20 @@ function reagentTracking(sampleID, reagentNames, reagentNums, metas){
  * @param sampleID
  * @param destBC Output barcode
  * @param destWellNum Output well number
+ * @param user Technician initials
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param protocol A string indicating which robot the log originated from
  */
-function lineageTracking(sampleID, destBC, destWellNum, metas, protocol){
+function lineageTracking(sampleID, destBC, destWellNum, user, metas, protocol){
   switch(protocol){
     case constants.ORIGIN_VAL.SAMPLE_PREP:
-      samplePrepTracking(sampleID, destBC, destWellNum, metas);
+      samplePrepTracking(sampleID, destBC, destWellNum, user, metas);
       break;
     case constants.ORIGIN_VAL.RNA_EXTRACTION:
-      rnaExtractionTracking(sampleID, destBC, destWellNum, metas);
+      rnaExtractionTracking(sampleID, destBC, destWellNum, user, metas);
       break;
     case constants.ORIGIN_VAL.QPCR_PREP:
-      qPCRPrepTracking(sampleID, destBC, destWellNum, metas);
+      qPCRPrepTracking(sampleID, destBC, destWellNum, user, metas);
       break;
   }
 }
@@ -465,7 +499,8 @@ async function hamiltonTracking(csvRow, metas){
 
   let destBC = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_BC];
   let destWellNum = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_WELL_NUM];
-  lineageTracking(sampleID, destBC, destWellNum, metas, protocol);
+  let user = csvRow[constants.HAMILTON_LOG_HEADERS.USER];
+  lineageTracking(sampleID, destBC, destWellNum, user, metas, protocol);
 }
 
 
@@ -506,30 +541,29 @@ async function updateFailed(sampleObj, metas, statusConst){
   let sampleID = getSampleId(sampleObj);
   let numAttempt = await increaseAttempt(sampleObj, metas);
 
+  const result = metas.find(m => m.key === constants.META.RESULT);
+  const status = metas.find(m => m.key === constants.META.STATUS);
+
   // If it's less than 2, we can rerun
   if (numAttempt < 2){
-    const result = metas.find(m => m.key === constants.META.RESULT);
     updateMeta({sampleId:sampleID,
       key: constants.META.RESULT,
       value: constants.TEST_RESULT.WARNING,
       type: result.sampleDataType,
       metaId: result.sampleTypeMetaID}); //update Test Result to "Control Failed"
 
-    const status = metas.find(m => m.key === constants.META.STATUS);
     updateMeta({sampleId:sampleID,
       key: constants.META.STATUS,
       value: statusConst,
       type: status.sampleDataType,
       metaId: status.sampleTypeMetaID}); // Update status to re-prep or re-extract
   } else {
-    const result = metas.find(m => m.key === constants.META.RESULT);
     updateMeta({sampleId:sampleID,
       key: constants.META.RESULT,
       value: constants.TEST_RESULT.INVALID,
       type: result.sampleDataType,
       metaId: result.sampleTypeMetaID}); //Update Test Result to "Invalid - recollect"
 
-    const status = metas.find(m => m.key === constants.META.STATUS);
     updateMeta({sampleId:sampleID,
       key: constants.META.STATUS,
       value: constants.STATUS_VAL.QPCR_DONE,
@@ -566,9 +600,10 @@ async function updatePassed(sampleObj, metas, call){
  * @param csvRow
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param failedWells Dictionary of all possible failed wells and their respective status
+ * @param user
  * @returns {Promise<void>}
  */
-async function updateTestResult(csvRow, metas, failedWells){
+async function updateTestResult(csvRow, metas, failedWells, user){
   let sampleBC = csvRow[constants.QPCR_LOG_HEADERS.SAMPLE];
   if (isControl(sampleBC)) {
     return;
@@ -579,6 +614,14 @@ async function updateTestResult(csvRow, metas, failedWells){
     process.exitCode = 8;
     return;
   }
+
+  let sampleID = getSampleId(sampleObj);
+  const userMeta = metas.find(meta => meta.key === constants.META.QPCR_TECH);
+  updateMeta({sampleId:sampleID,
+    key: constants.META.QPCR_TECH,
+    value: user,
+    type: userMeta.sampleDataType,
+    metaId: userMeta.sampleTypeMetaID}); //update initials of "qPCR Protocol User"
 
   let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
   if (wellNum in failedWells){
@@ -664,8 +707,9 @@ function getFailureWells(failedControls){
  * @param logfile Output from Hamilton or QuantStudio
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param failedWells Dictionary of all possible failed wells and their respective status
+ * @param qPCRUser
  */
-function parseCSV(logfile, metas, failedWells){
+function parseCSV(logfile, metas, failedWells, qPCRUser){
   let readStream = fs.createReadStream(logfile);
   readStream.pipe(csv.parse({
     headers:true,
@@ -678,7 +722,7 @@ function parseCSV(logfile, metas, failedWells){
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
         updateCTValues(row, metas);
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
-        updateTestResult(row, metas, failedWells);
+        updateTestResult(row, metas, failedWells, qPCRUser);
       }
     })
     .on('error', (error) => {
@@ -707,20 +751,25 @@ async function main(logfile){
 
   let fileData = fs.readFileSync(logfile, 'utf8');
   let failedWells = {};
-  if (isWellCall(fileData)){  // look for control failures
+  let qPCRUser = "";
+  if (isWellCall(fileData)){
+    // look for control failures
     let failedControls = getWarningWells(fileData);
     if(failedControls){
       logger.info(`Failed controls ${failedControls}`);
       failedWells = getFailureWells(failedControls);
     }
+
+    // get technician info
+    qPCRUser = getqPCRUser(fileData);
+
+    if (!failedWells || !qPCRUser){
+      process.exitCode = 8;
+      return;
+    }
   }
 
-  if (!failedWells){
-    process.exitCode = 8;
-    return;
-  }
-
-  parseCSV(logfile, metas, failedWells);
+  parseCSV(logfile, metas, failedWells, qPCRUser);
 }
 
 /**

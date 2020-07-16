@@ -11,10 +11,14 @@ const META = {
   N2: "CT Value (N2)",
   RP: "CT Value (RP)",
   NUM_ATTEMPTS: "Number of Attempts",
+  SAMPLE_PREP_TECH: "Sample Aliquot User",
+  EXTRACTION_TECH: "RNA Extraction User",
+  QPCR_PREP_TECH: "qPCR Prep User",
+  QPCR_TECH: "qPCR User"
 };
 
 const STATUS_VAL = {
-  SAMPLE_PREP_DONE: "Sample Transferred To 96-Well Plate",
+  SAMPLE_PREP_DONE: "Sample Transferred to 96-Well Plate",
   RNA_DONE: "RNA Extracted",
   QPCR_PREP_DONE: "qPCR Reactions Prepared",
   QPCR_DONE: "qPCR Complete",
@@ -45,7 +49,8 @@ const HAMILTON_LOG_HEADERS = {
   DEST_BC: "Output Barcode",
   DEST_WELL_NUM: "Output Well Number",
   REAGENT_NAMES: "Reagent Names",
-  REAGENT_NUMS: "Reagent Lot Numbers"
+  REAGENT_NUMS: "Reagent Lot Numbers",
+  USER: "UserName"
 };
 
 const QPCR_LOG_HEADERS = {
@@ -68,7 +73,6 @@ const PLATE384 = {
   ROW: 16,
   COL: 24
 };
-
 
 module.exports = {
   HAMILTON_LOG_HEADERS: HAMILTON_LOG_HEADERS,
