@@ -39,14 +39,12 @@ const logger = createLogger({
 /*******************
  * HELPER FUNCTIONS
  *******************/
-function sleep(ms) {
-  return new Promise((resolve) => {
-    setTimeout(resolve, ms);
-  });
-}
-
 function equalsIgnoringCase(text, other) {
   return text.localeCompare(other, undefined, { sensitivity: 'accent' }) === 0;
+}
+
+function isEmpty(str) {
+  return (!str || str.trim().length === 0);
 }
 
 function isOdd(num) {
@@ -63,18 +61,6 @@ function getNumAttempts(patientSample){
 
 function getSampleId(patientSample){
   return patientSample.data[0].sampleID;
-}
-
-function makeSearchURIObject(metas, plateBC, wellNum){
-  const pcrBC = metas.find(m => m.key === constants.META.QPCR_PLATE_BC);
-  const pcrWN = metas.find(m => m.key === constants.META.QPCR_PLATE_WELL_NUM);
-  return encodeURIComponent(`[{` +
-    `"sampleTypeMetaID": ${pcrBC.sampleTypeMetaID},` +
-    `"metaValue": "${plateBC}"` +
-    `}, {` +
-    `"sampleTypeMetaID": ${pcrWN.sampleTypeMetaID},` +
-    `"metaValue": "${wellNum}"` +
-  `}]`);
 }
 
 function stringToArray(str){
@@ -161,55 +147,16 @@ async function updateMeta({sampleId, key, value, type, metaId}={}){
       if(res.status === 200){
         logger.info(`Update sample: ${sampleId}, field:${key}, statusCode: ${res.status}`);
       } else {
-        logger.error(res.data);
-        process.exitCode = 8;
-      }
-    })
-    .catch((error) => {
-      logger.error(`Failed to update sample meta: ${error.response.data.message}
-                    Error: ${error.response.data.errors}`);
-      process.exitCode = 8;
-    });
-}
-
-/**
- * Search for a Covid-19 sample in a specific well of a qPCR plate
- * @param metas Array of meta fields associated with the COVID-19 SampleType
- * @param plateBC
- * @param wellNum
- * @returns {Promise<void>}
- */
-async function searchForPatienSample(metas, plateBC, wellNum){
-  let searchParams = makeSearchURIObject(metas, plateBC, wellNum);
-  let endpoint = `${config.get('endpoints.samples')}` +
-    `?$expand=meta&sampleTypeID=${config.get('covidSampleTypeId')}` +
-    `&filterBySampleTypeMetaValues=${searchParams}`;
-
-  return axios.get(endpoint)
-    .then((res) => {
-      if(res.status === 200){
-        if(res.data.data.length === 0){
-          process.exitCode = 8;
-          logger.error(`No sample found in well ${wellNum} of qPCR plate ${plateBC}`);
-          return null;
-        }
-        else if(res.data.data.length === 1){
-          logger.info(`Found sample ${getSampleId(res.data)} in well ${wellNum} on qPCR plate ${plateBC}`);
-          return res.data;
-        } else {
-          logger.error(`More than one sample found in well ${wellNum} of qPCR plate ${plateBC}`);
-          process.exitCode = 8;
-          return null;
-        }
-      } else{
-        logger.error(res.data);
+        logger.error(`Failed to update sample:${sampleId}, meta field: ${key}. 
+                      Error: ${res.data}. SAMPLE ID:${sampleId} NOT CORRECTLY PROCESSED.`);
         process.exitCode = 8;
         return null;
       }
     })
     .catch((error) => {
-      logger.error(`Failed to find sample with message: ${error.response.data.message}
-                    Error: ${error.response.data.errors}`);
+      logger.error(`Failed to update sample: ${sampleId}, meta field: ${key} 
+                    with message ${error.response.data.message}. Error: ${error.response.data.errors}.
+                    SAMPLE ID:${sampleId} NOT CORRECTLY PROCESSED.`);
       process.exitCode = 8;
       return null;
     });
@@ -231,14 +178,16 @@ async function getPatientSample(barcode){
       if(res.status === 200){
         if(res.data.data.length === 0){
           process.exitCode = 8;
-          logger.error(`Sample for barcode ID ${barcode} not found`);
+          logger.error(`Sample for barcode ID ${barcode} not found. 
+                        SAMPLE BC:${barcode} NOT PROCESSED.`);
           return null;
         }
         else if(res.data.data.length === 1){
           logger.info(`Got sample with barcode ${barcode}, statusCode: ${res.status}`);
           return res.data;
         } else {
-          logger.error(`More than one sample found with name ${barcode}`);
+          logger.error(`More than one sample found with name ${barcode}. 
+                        SAMPLE BC:${barcode} NOT PROCESSED.`);
           process.exitCode = 8;
           return null;
         }
@@ -250,7 +199,8 @@ async function getPatientSample(barcode){
     })
     .catch((error) => {
       logger.error(`Failed to get sample: ${barcode} with message: ${error.response.data.message}
-                    Error: ${error.response.data.errors}`);
+                    Error: ${error.response.data.errors}. 
+                    SAMPLE BC:${barcode} NOT PROCESSED.`);
       process.exitCode = 8;
       return null;
     });
@@ -274,7 +224,7 @@ async function getCovidSampleTypeMetas(){
       }
     })
     .catch((error) => {
-      logger.error(`Failed to find sample with message: ${error.response.data.message}
+      logger.error(`Failed to find sample type with message: ${error.response.data.message}
                     Error: ${error.response.data.errors}`);
       process.exitCode = 8;
       return null;
@@ -422,7 +372,8 @@ function reagentTracking(sampleID, reagentNames, reagentNums, metas){
   reagentNums = stringToArray(reagentNums);
 
   if(reagentNames.length !== reagentNums.length){
-    logger.error(`Length of reagent names do not match length of reagent lot numbers for sample ${sampleID}`);
+    logger.error(`Length of reagent names do not match length of reagent lot numbers.
+                  SAMPLE ID:${sampleID} NOT CORRECTLY PROCESSED.`);
     process.exitCode = 8;
     return null;
   }
@@ -435,7 +386,8 @@ function reagentTracking(sampleID, reagentNames, reagentNums, metas){
         type: reagentMeta.sampleDataType,
         metaId: reagentMeta.sampleTypeMetaID}); //Update reagent lot number
     } else {
-      logger.error(`Reagent field ${reagentNames[i]} cannot be found for sample ${sampleID}`);
+      logger.error(`Reagent field ${reagentNames[i]} cannot be found.
+                    SAMPLE ID:${sampleID} NOT CORRECTLY PROCESSED.`);
       process.exitCode = 8;
       return null;
     }
@@ -474,17 +426,18 @@ function lineageTracking(sampleID, destBC, destWellNum, user, metas, protocol){
  * @returns {Promise<void>}
  */
 async function hamiltonTracking(csvRow, metas){
+  let sampleBC = csvRow[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC];
+
   let protocol = csvRow[constants.HAMILTON_LOG_HEADERS.PROTOCOL];
   if (!protocol || (!(protocol in constants.ORIGIN_VAL))){
     let protocolVals = Object.keys(constants.ORIGIN_VAL);
     logger.error(`${protocol} is not recognized as a supported process. Must be one of the
                   ${protocolVals.length} values: ${Object.keys(constants.ORIGIN_VAL)}.
-                  Index ${csvRow[constants.HAMILTON_LOG_HEADERS.INDEX]} not processed.`);
+                  SAMPLE BC:${sampleBC} NOT PROCESSED.`);
     process.exitCode = 8;
     return;
   }
 
-  let sampleBC = csvRow[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC];
   let sampleObj = await getPatientSample(sampleBC);
   if(!sampleObj){
     process.exitCode = 8;
@@ -673,6 +626,7 @@ function getFailureWells(failedControls){
   for(let failed of failedControls){
     if(!constants.CONTROL_WELLS.includes(failed)){
       logger.error(`${failed} is not a valid Control well`);
+      process.exitCode = 8;
       return null;
     }
 
@@ -738,13 +692,14 @@ async function main(logfile){
 
   let auth = await login();
   if (!auth || auth !== 200){
-    logger.error(`Failed to log into eLabs.`);
+    logger.error(`Failed to log into eLabs. NO SAMPLE IN LOGFILE:${logfile} WAS PROCESSED.`);
     process.exitCode = 8;
     return;
   }
 
   let metas = await getCovidSampleTypeMetas();
   if (!metas){
+    logger.error(`Error occurred when getting SampleType. NO SAMPLE IN LOGFILE:${logfile} WAS PROCESSED.`);
     process.exitCode = 8;
     return;
   }
@@ -763,7 +718,14 @@ async function main(logfile){
     // get technician info
     qPCRUser = getqPCRUser(fileData);
 
-    if (!failedWells || !qPCRUser){
+    if (!failedWells){
+      logger.error(`Error occurred when parsing control fails. NO SAMPLE IN LOGFILE:${logfile} WAS PROCESSED.`);
+      process.exitCode = 8;
+      return;
+    }
+
+    if (isEmpty(qPCRUser)){
+      logger.error(`Error occurred when parsing user initials. NO SAMPLE IN LOGFILE:${logfile} WAS PROCESSED.`);
       process.exitCode = 8;
       return;
     }
@@ -776,6 +738,10 @@ async function main(logfile){
  * file: path of the CSV file to be parsed
  */
 main(argv.file);
+process.on('unhandledRejection', (reason, promise) => {
+  process.exitCode = 8;
+  logger.error(`Unhandled Rejection at: ${reason.stack || reason}`)
+});
 process.on('exit', (code) => {
   console.log(`Exited with code ${code}`);
   logger.info(`Process exit event with code:${code}`);
