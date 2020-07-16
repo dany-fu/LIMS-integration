@@ -1,8 +1,8 @@
 const META = {
-  DEEPWELL_BC: "Sample Deep-Well Barcode",
-  DEEPWELL_WELL_NUM: "Sample Deep-Well Well Location",
-  RNA_PLATE_BC: "RNA Extraction Plate Barcode",
-  RNA_PLATE_WELL_NUM: "RNA Extraction Plate Well Location",
+  DEEPWELL_BC: "Extraction Plate Barcode",
+  DEEPWELL_WELL_NUM: "Extraction Plate Well Location",
+  RNA_PLATE_BC: "RNA Elution Plate Barcode",
+  RNA_PLATE_WELL_NUM: "RNA Elution Plate Well Location",
   QPCR_PLATE_BC: "qPCR Plate Barcode",
   QPCR_PLATE_WELL_NUM: "qPCR Plate Well Location",
   STATUS: "Sample Process Status",
@@ -18,10 +18,10 @@ const META = {
 };
 
 const STATUS_VAL = {
-  SAMPLE_PREP_DONE: "Sample Transferred to 96-Well Plate",
+  SAMPLE_PREP_DONE: "Sample Transferred to Extraction Plate",
   RNA_DONE: "RNA Extracted",
-  QPCR_PREP_DONE: "qPCR Reactions Prepared",
-  QPCR_DONE: "qPCR Complete",
+  QPCR_PREP_DONE: "qPCR Plate Prepared",
+  QPCR_DONE: "qPCR Completed",
   RE_EXTRACT: "Re-run RNA Extraction",
   RE_QPCR: "Re-run qPCR"
 };
@@ -37,7 +37,7 @@ const TEST_RESULT ={
 };
 
 const ORIGIN_VAL = {
-  SAMPLE_PREP: "SAMPLE_PREP",
+  SAMPLE_ALIQUOT: "SAMPLE_ALIQUOT",
   RNA_EXTRACTION: "RNA_EXTRACTION",
   QPCR_PREP: "QPCR_PREP"
 };

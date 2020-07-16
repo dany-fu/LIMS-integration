@@ -406,7 +406,7 @@ function reagentTracking(sampleID, reagentNames, reagentNums, metas){
  */
 function lineageTracking(sampleID, destBC, destWellNum, user, metas, protocol){
   switch(protocol){
-    case constants.ORIGIN_VAL.SAMPLE_PREP:
+    case constants.ORIGIN_VAL.SAMPLE_ALIQUOT:
       samplePrepTracking(sampleID, destBC, destWellNum, user, metas);
       break;
     case constants.ORIGIN_VAL.RNA_EXTRACTION:
