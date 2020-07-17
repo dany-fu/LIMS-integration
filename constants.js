@@ -1,3 +1,5 @@
+// Author: Dany Fu (danyfu@bu.edu)
+
 const META = {
   DEEPWELL_BC: "Extraction Plate Barcode",
   DEEPWELL_WELL_NUM: "Extraction Plate Well Location",

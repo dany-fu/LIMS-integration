@@ -106,7 +106,7 @@ function getqPCRSN(data) {
 
 
 /******************
- * ELABS API CALLS
+ * ELAB API CALLS
  ******************/
 
 /**
@@ -251,10 +251,10 @@ async function getCovidSampleTypeMetas(){
  * from the Sample Prep Hamilton and update status
  * @param sampleID Unique ID of the sample in eLabs
  * @param metas Array of meta fields associated with the COVID-19 SampleType
- * @param destBC
- * @param destWellNum
+ * @param destBC Output plate barcode
+ * @param destWellNum Output well number
  * @param user Technician initials
- * @param serialNum
+ * @param serialNum Serial number of the Hamilton robot
  * @returns {Promise<void>}
  */
 async function samplePrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
@@ -300,10 +300,10 @@ async function samplePrepTracking(sampleID, metas, destBC, destWellNum, user, se
  * from the RNA Extraction Hamilton and update status
  * @param sampleID Unique ID of the sample in eLabs
  * @param metas Array of meta fields associated with the COVID-19 SampleType
- * @param destBC
- * @param destWellNum
+ * @param destBC Output plate barcode
+ * @param destWellNum Output well number
  * @param user Technician initials
- * @param serialNum
+ * @param serialNum Serial number of the Hamilton robot
  * @returns {Promise<void>}
  */
 async function rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
@@ -349,10 +349,10 @@ async function rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user,
  * from the qPCR Prep Hamilton and update status
  * @param sampleID Unique ID of the sample in eLabs
  * @param metas Array of meta fields associated with the COVID-19 SampleType
- * @param destBC
- * @param destWellNum
+ * @param destBC Output plate barcode
+ * @param destWellNum Output well number
  * @param user Technician initials
- * @param serialNum
+ * @param serialNum Serial number of the Hamilton robot
  * @returns {Promise<void>}
  */
 function qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
@@ -432,10 +432,10 @@ function reagentTracking(sampleID, metas, reagentNames, reagentNums){
  * @param sampleID Unique ID of the sample in eLab
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param protocol A string indicating which robot the log originated from
- * @param destBC Output barcode
+ * @param destBC Output plate barcode
  * @param destWellNum Output well number
  * @param user Technician initials
- * @param serialNum
+ * @param serialNum Serial number of the Hamilton robot
  */
 function lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, serialNum){
   switch(protocol){
@@ -497,8 +497,8 @@ async function hamiltonTracking(csvRow, metas){
 
 /**
  * Increases number of attempt by 1 if allowed and returns the total number of attempts
- * @param sampleObj
- * @param metas
+ * @param sampleObj data object of the sample from eLab
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @returns {Promise<*>}
  */
 async function increaseAttempt(sampleObj, metas){
@@ -518,9 +518,9 @@ async function increaseAttempt(sampleObj, metas){
 }
 
 /**
- * Updates status of failed samples
- * @param sampleObj
- * @param metas
+ * Updates status and result of samples that belong to the plate which had a failed control
+ * @param sampleObj data object of the sample from eLab
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param statusConst Either "Re-run qPCR" or "Re-run RNA Extraction"
  * @returns {Promise<void>}
  */
@@ -559,6 +559,13 @@ async function updateFailed(sampleObj, metas, statusConst){
   }
 }
 
+/**
+ * Updates status and result of samples that did not fail its control sample
+ * @param sampleObj data object of the sample from eLab
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param call Result of the well from the Call column of the qPCR output
+ * @returns {Promise<void>}
+ */
 async function updatePassed(sampleObj, metas, call){
   let sampleID = getSampleId(sampleObj);
   increaseAttempt(sampleObj, metas);
@@ -609,7 +616,7 @@ async function updateTestResult(csvRow, metas, failedWells, user, serialNum){
     key: constants.META.QPCR_TECH,
     value: user,
     type: userMeta.sampleDataType,
-    metaId: userMeta.sampleTypeMetaID}); //update initials of "qPCR Protocol User"
+    metaId: userMeta.sampleTypeMetaID}); //update initials of "qPCR User"
 
   const snNumMeta = metas.find(meta => meta.key === constants.META.QPCR_SN);
   updateMeta({sampleId:sampleID,
@@ -791,6 +798,7 @@ async function main(logfile){
  * file: path of the CSV file to be parsed
  */
 main(argv.file);
+
 process.on('unhandledRejection', (reason, promise) => {
   process.exitCode = 8;
   logger.error(`Unhandled Rejection at: ${reason.stack || reason}`)
