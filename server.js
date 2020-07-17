@@ -95,6 +95,15 @@ function getqPCRUser(data) {
   return null;
 }
 
+function getqPCRSN(data) {
+  const regex = /# Instrument Serial Number: (.*)/g;
+  let found = regex.exec(data);
+  if(found){
+    return found[1];
+  }
+  return null;
+}
+
 
 /******************
  * ELABS API CALLS
@@ -241,13 +250,14 @@ async function getCovidSampleTypeMetas(){
  * Update Covid-19 Sample with the plate barcode and well number
  * from the Sample Prep Hamilton and update status
  * @param sampleID Unique ID of the sample in eLabs
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param destBC
  * @param destWellNum
  * @param user Technician initials
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param serialNum
  * @returns {Promise<void>}
  */
-async function samplePrepTracking(sampleID, destBC, destWellNum, user, metas){
+async function samplePrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
 
   const dwBC = metas.find(m => m.key === constants.META.DEEPWELL_BC);
   updateMeta({sampleId:sampleID,
@@ -276,19 +286,27 @@ async function samplePrepTracking(sampleID, destBC, destWellNum, user, metas){
     value: user,
     type: userMeta.sampleDataType,
     metaId: userMeta.sampleTypeMetaID}); //update initials of "Sample Aliquot User"
+
+  const snMeta = metas.find(meta => meta.key === constants.META.SAMPLE_PREP_SN);
+  updateMeta({sampleId:sampleID,
+    key: constants.META.SAMPLE_PREP_SN,
+    value: serialNum,
+    type: snMeta.sampleDataType,
+    metaId: snMeta.sampleTypeMetaID}); //update "Sample Aliquot Instrument SN"
 }
 
 /**
  * Updates Covid-19 Sample with the plate barcode and well number
  * from the RNA Extraction Hamilton and update status
  * @param sampleID Unique ID of the sample in eLabs
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param destBC
  * @param destWellNum
  * @param user Technician initials
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param serialNum
  * @returns {Promise<void>}
  */
-async function rnaExtractionTracking(sampleID, destBC, destWellNum, user, metas){
+async function rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
 
   const rnaBC = metas.find(m => m.key === constants.META.RNA_PLATE_BC);
   updateMeta({sampleId:sampleID,
@@ -317,19 +335,27 @@ async function rnaExtractionTracking(sampleID, destBC, destWellNum, user, metas)
     value: user,
     type: userMeta.sampleDataType,
     metaId: userMeta.sampleTypeMetaID}); //update initials of "RNA Extraction User"
+
+  const snMeta = metas.find(meta => meta.key === constants.META.EXTRACTION_SN);
+  updateMeta({sampleId:sampleID,
+    key: constants.META.EXTRACTION_SN,
+    value: serialNum,
+    type: snMeta.sampleDataType,
+    metaId: snMeta.sampleTypeMetaID}); //update "RNA Extraction Instrument SN"
 }
 
 /**
  * Updates Covid-19 Sample with the plate barcode and well number
  * from the qPCR Prep Hamilton and update status
  * @param sampleID Unique ID of the sample in eLabs
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param destBC
  * @param destWellNum
  * @param user Technician initials
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param serialNum
  * @returns {Promise<void>}
  */
-function qPCRPrepTracking(sampleID, destBC, destWellNum, user, metas){
+function qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
 
   const pcrBC = metas.find(m => m.key === constants.META.QPCR_PLATE_BC);
   updateMeta({sampleId:sampleID,
@@ -358,16 +384,23 @@ function qPCRPrepTracking(sampleID, destBC, destWellNum, user, metas){
     value: user,
     type: userMeta.sampleDataType,
     metaId: userMeta.sampleTypeMetaID}); //update initials of "qPCR Prep User"
+
+  const snMeta = metas.find(meta => meta.key === constants.META.QPCR_PREP_SN);
+  updateMeta({sampleId:sampleID,
+    key: constants.META.QPCR_PREP_SN,
+    value: serialNum,
+    type: snMeta.sampleDataType,
+    metaId: snMeta.sampleTypeMetaID}); //update "qPCR Prep Instrument SN"
 }
 
 /**
  * Updates a Covid-19 Sample with the reagent lot number it was processed with
- * @param sampleID
+ * @param sampleID Unique ID of the sample in eLab
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param reagentNames Array of reagent names used
  * @param reagentNums Array of reagent lot numbers, matches the names by index
- * @param metas Array of meta fields associated with the COVID-19 SampleType
  */
-function reagentTracking(sampleID, reagentNames, reagentNums, metas){
+function reagentTracking(sampleID, metas, reagentNames, reagentNums){
   reagentNames = stringToArray(reagentNames);
   reagentNums = stringToArray(reagentNums);
 
@@ -391,29 +424,29 @@ function reagentTracking(sampleID, reagentNames, reagentNums, metas){
       process.exitCode = 8;
       return null;
     }
-
   }
 }
 
 /**
  * Calls the appropriate update function based on Hamilton protocol
- * @param sampleID
+ * @param sampleID Unique ID of the sample in eLab
+ * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param protocol A string indicating which robot the log originated from
  * @param destBC Output barcode
  * @param destWellNum Output well number
  * @param user Technician initials
- * @param metas Array of meta fields associated with the COVID-19 SampleType
- * @param protocol A string indicating which robot the log originated from
+ * @param serialNum
  */
-function lineageTracking(sampleID, destBC, destWellNum, user, metas, protocol){
+function lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, serialNum){
   switch(protocol){
     case constants.ORIGIN_VAL.SAMPLE_ALIQUOT:
-      samplePrepTracking(sampleID, destBC, destWellNum, user, metas);
+      samplePrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
       break;
     case constants.ORIGIN_VAL.RNA_EXTRACTION:
-      rnaExtractionTracking(sampleID, destBC, destWellNum, user, metas);
+      rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
       break;
     case constants.ORIGIN_VAL.QPCR_PREP:
-      qPCRPrepTracking(sampleID, destBC, destWellNum, user, metas);
+      qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
       break;
   }
 }
@@ -447,13 +480,14 @@ async function hamiltonTracking(csvRow, metas){
   let sampleID = getSampleId(sampleObj);
   let reagentNames = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NAMES];
   let reagentNums = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NUMS];
-  reagentTracking(sampleID, reagentNames, reagentNums, metas);
+  reagentTracking(sampleID, metas, reagentNames, reagentNums);
 
 
   let destBC = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_BC];
   let destWellNum = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_WELL_NUM];
   let user = csvRow[constants.HAMILTON_LOG_HEADERS.USER];
-  lineageTracking(sampleID, destBC, destWellNum, user, metas, protocol);
+  let serialNum = csvRow[constants.HAMILTON_LOG_HEADERS.SERIAL_NUM];
+  lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, serialNum);
 }
 
 
@@ -553,10 +587,11 @@ async function updatePassed(sampleObj, metas, call){
  * @param csvRow
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param failedWells Dictionary of all possible failed wells and their respective status
- * @param user
+ * @param user Initials of the technician who initiated the qPCR run
+ * @param serialNum Serial number of the qPCR machine
  * @returns {Promise<void>}
  */
-async function updateTestResult(csvRow, metas, failedWells, user){
+async function updateTestResult(csvRow, metas, failedWells, user, serialNum){
   let sampleBC = csvRow[constants.QPCR_LOG_HEADERS.SAMPLE];
   if (isControl(sampleBC)) {
     return;
@@ -575,6 +610,13 @@ async function updateTestResult(csvRow, metas, failedWells, user){
     value: user,
     type: userMeta.sampleDataType,
     metaId: userMeta.sampleTypeMetaID}); //update initials of "qPCR Protocol User"
+
+  const snNumMeta = metas.find(meta => meta.key === constants.META.QPCR_SN);
+  updateMeta({sampleId:sampleID,
+    key: constants.META.QPCR_SN,
+    value: serialNum,
+    type: snNumMeta.sampleDataType,
+    metaId: snNumMeta.sampleTypeMetaID}); //update "qPCR SN"
 
   let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
   if (wellNum in failedWells){
@@ -657,13 +699,14 @@ function getFailureWells(failedControls){
 }
 
 /**
- *
+ * Handles parsing of all Hamilton and QuantStudio CSV output
  * @param logfile Output from Hamilton or QuantStudio
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param failedWells Dictionary of all possible failed wells and their respective status
- * @param qPCRUser
+ * @param qPCRUser Required for Well Call file
+ * @param qPCRSerialNum Required for Well Call file
  */
-function parseCSV(logfile, metas, failedWells, qPCRUser){
+function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
   let readStream = fs.createReadStream(logfile);
   readStream.pipe(csv.parse({
     headers:true,
@@ -676,7 +719,7 @@ function parseCSV(logfile, metas, failedWells, qPCRUser){
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
         updateCTValues(row, metas);
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
-        updateTestResult(row, metas, failedWells, qPCRUser);
+        updateTestResult(row, metas, failedWells, qPCRUser, qPCRSerialNum);
       }
     })
     .on('error', (error) => {
@@ -707,6 +750,7 @@ async function main(logfile){
   let fileData = fs.readFileSync(logfile, 'utf8');
   let failedWells = {};
   let qPCRUser = "";
+  let qPCRSerialNum = "";
   if (isWellCall(fileData)){
     // look for control failures
     let failedControls = getWarningWells(fileData);
@@ -717,6 +761,9 @@ async function main(logfile){
 
     // get technician info
     qPCRUser = getqPCRUser(fileData);
+
+    // get machine serial number
+    qPCRSerialNum = getqPCRSN(fileData);
 
     if (!failedWells){
       logger.error(`Error occurred when parsing control fails. NO SAMPLE IN LOGFILE:${logfile} WAS PROCESSED.`);
@@ -729,9 +776,15 @@ async function main(logfile){
       process.exitCode = 8;
       return;
     }
+
+    if (isEmpty(qPCRSerialNum)){
+      logger.error(`Error occurred when parsing instrument serial number. NO SAMPLE IN LOGFILE:${logfile} WAS PROCESSED.`);
+      process.exitCode = 8;
+      return;
+    }
   }
 
-  parseCSV(logfile, metas, failedWells, qPCRUser);
+  parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum);
 }
 
 /**

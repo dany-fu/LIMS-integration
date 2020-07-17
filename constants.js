@@ -14,7 +14,11 @@ const META = {
   SAMPLE_PREP_TECH: "Sample Aliquot User",
   EXTRACTION_TECH: "RNA Extraction User",
   QPCR_PREP_TECH: "qPCR Prep User",
-  QPCR_TECH: "qPCR User"
+  QPCR_TECH: "qPCR User",
+  SAMPLE_PREP_SN: "Sample Aliquot Instrument SN",
+  EXTRACTION_SN: "RNA Extraction Instrument SN",
+  QPCR_PREP_SN: "qPCR Prep Instrument SN",
+  QPCR_SN: "qPCR SN"
 };
 
 const STATUS_VAL = {
@@ -50,7 +54,8 @@ const HAMILTON_LOG_HEADERS = {
   DEST_WELL_NUM: "Output Well Number",
   REAGENT_NAMES: "Reagent Names",
   REAGENT_NUMS: "Reagent Lot Numbers",
-  USER: "UserName"
+  USER: "UserName",
+  SERIAL_NUM: "Machine SN"
 };
 
 const QPCR_LOG_HEADERS = {
