@@ -807,10 +807,3 @@ process.on('exit', (code) => {
   console.log(`Exited with code ${code}`);
   logger.info(`Process exit event with code:${code}`);
 });
-
-//for testing
-module.exports = {
-  login: login,
-  getCovidSampleTypeMetas: getCovidSampleTypeMetas,
-  qPCRPrepTracking: qPCRPrepTracking
-};
