@@ -1,6 +1,5 @@
 {
-  "username": "",
-  "password": "",
+  "authToken": "",
   "covidSampleTypeId": 0,
   "endpoints": {
     "login": ".../auth/user",
