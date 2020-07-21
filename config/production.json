@@ -1,11 +1,11 @@
 {
   "username": "",
   "password": "",
-  "covidSampleTypeId": 0,
+  "covidSampleTypeId": 33369,
   "endpoints": {
-    "login": ".../auth/user",
-    "createSample": ".../samples?autoCreateMetaDefaults=true",
-    "sampleTypes": ".../sampleTypes",
-    "samples": "https://us.elabjournal.com/api/v1/samples"
+    "login": "https://bu.elabjournal.com/auth/user",
+    "createSample": "https://bu.elabjournal.com/samples?autoCreateMetaDefaults=true",
+    "sampleTypes": "https://bu.elabjournal.com/sampleTypes",
+    "samples": "https://bu.elabjournal.com/api/v1/samples"
   }
 }
