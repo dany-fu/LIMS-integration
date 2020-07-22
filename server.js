@@ -123,9 +123,19 @@ async function login() {
     .then((res) => {
       logger.info(`Authentication status code: ${res.status}`);
       if(res.status === 200){
-        axios.defaults.headers.common['Authorization'] = res.data.token;
+        if(res.data.token){
+          axios.defaults.headers.common['Authorization'] = res.data.token;
+          return res.status;
+        } else {
+          logger.error(`Authentication token could not be generated. Check that domain is correct.`);
+          process.exitCode = 8;
+          return null;
+        }
+      } else {
+        logger.error(`Authentication failed: status code ${res.status}`);
+        process.exitCode = 8;
+        return null;
       }
-      return res.status;
     })
     .catch((error) => {
       logger.error(`Failed to authenticate with message: ${error.response.data.message}
