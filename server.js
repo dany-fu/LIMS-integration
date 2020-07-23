@@ -432,7 +432,6 @@ function reagentTracking(sampleID, metas, reagentNames, reagentNums){
       logger.error(`Reagent field ${reagentNames[i]} cannot be found.
                     SAMPLE ID:${sampleID} NOT CORRECTLY PROCESSED.`);
       process.exitCode = 8;
-      return null;
     }
   }
 }
