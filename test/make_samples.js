@@ -23,28 +23,6 @@ const logger = winston.createLogger({
   ],
 });
 
-async function login() {
-
-  return axios
-    .post(config.get('endpoints.login'), {
-      username: config.get('username'),
-      password: config.get('password'),
-    })
-    .then((res) => {
-      logger.info(`Authentication status code: ${res.status}`);
-      if(res.status === 200){
-        axios.defaults.headers.common['Authorization'] = res.data.token;
-      }
-      return res.status;
-    })
-    .catch((error) => {
-      logger.error(`Failed to authenticate with message: ${error.response.data.message}
-                    Error: ${error.response.data.errors}`);
-      process.exitCode = 8;
-      return null;
-    });
-}
-
 /**
  * Get all the meta fields for COVID-19 SampleType
  * The sampleTypeId is pulled from config
@@ -70,8 +48,19 @@ async function getCovidSampleTypeMetas(){
     });
 }
 
+function isEmpty(str) {
+  return (!str || str.trim().length === 0);
+}
+
 async function init(){
-  let auth = await login();
+  let token = config.get('authToken');
+  if (isEmpty(token)){
+    logger.error(`No authentication token found in config.`);
+    process.exitCode = 8;
+    return;
+  }
+  axios.defaults.headers.common['Authorization'] = token;
+
   if (!auth || auth !== 200){
     logger.error(`Failed to log into eLabs.`);
     process.exitCode = 8;

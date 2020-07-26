@@ -38,14 +38,15 @@ This repository contains code for
    - For Call values, we expect the Well Call file to have the headers
        - `Well Position`    
        - `Sample`     
-       - `Call`    
+       - `Call`  - valid values are WARNING, POSITIVE, NEGATIVE, INCONCLUSIVE, or INVALID  
        - It must **NOT** contain the header `Cq`
        - We expect the file to contain the string `[Well Call]`   
        - We expect the serial number to follow the string `# Instrument Serial Number: `   
        - We expect the technician's initials to follow the string `# User Name: `   
    - Only the Well Call file updates the Sample Process Status, qPCR User, and qPCR SN.
    - All samples named `PCR_POS`, `NEC_#`, `NTC_#` is assumed to be a control and skipped during processing 
-   UNLESS there is a failure. In which case, the Control Fail Procedure will be followed, outlined below. 
+   UNLESS there is a failure. In which case, the Control Fail Procedure will be followed, outlined below.  
+   
 * Existing eLab SampleType and custom fields should not be altered    
    - Expected fields are defined in `constants.js`
 * **File contents and eLab fields are case and white-space sensitive**

@@ -1,6 +1,5 @@
 {
-  "username": "",
-  "password": "",
+  "authToken": "",
   "covidSampleTypeId": 24021,
   "endpoints": {
     "login": "https://sandbox.elabjournal.com/api/v1/auth/user",
