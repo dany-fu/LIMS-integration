@@ -1,6 +1,8 @@
 // Author: Dany Fu (danyfu@bu.edu)
 
-const axios = require("axios").default;
+const ax = require("axios").default;
+const rateLimit = require("axios-rate-limit");
+const axios = rateLimit(ax.create(), { maxRequests: 50, perMilliseconds: 1000});
 const csv = require("fast-csv");
 const fs = require("fs");
 const argv = require("minimist")(process.argv.slice(2));
@@ -137,9 +139,14 @@ async function updateMeta({sampleId, key, value, type, metaId}={}){
       }
     })
     .catch((error) => {
-      logger.error(`Failed to update sample: ${sampleId}, meta field: ${key} 
-                    with message ${error.response.data.message}. Error: ${error.response.data.errors}.
+      if(error.response.data){
+        logger.error(`Failed to update sample: ${sampleId}, meta field: ${key} 
+                    with message ${error.response.data.message}. Error: ${error.response.data}.
                     SAMPLE ID:${sampleId} NOT CORRECTLY PROCESSED.`);
+      } else {
+        logger.error(`Failed to update sample: ${sampleId}, meta field: ${key} with message ${error.response}. 
+                      SAMPLE ID:${sampleId} NOT CORRECTLY PROCESSED.`);
+      }
       process.exitCode = 8;
       return null;
     });
@@ -181,9 +188,14 @@ async function getPatientSample(barcode){
       }
     })
     .catch((error) => {
-      logger.error(`Failed to get sample: ${barcode} with message: ${error.response.data.message}
-                    Error: ${error.response.data.errors}. 
+      if(error.response.data){
+        logger.error(`Failed to get sample: ${barcode} with message: ${error.response.data.message}
+                    Error: ${error.response.data}. 
                     SAMPLE BC:${barcode} NOT PROCESSED.`);
+      } else {
+        logger.error(`Failed to get sample: ${barcode} with message ${error.response}. 
+                      SAMPLE ID:${barcode} NOT CORRECTLY PROCESSED.`);
+      }
       process.exitCode = 8;
       return null;
     });
@@ -207,9 +219,9 @@ async function getCovidSampleTypeMetas(){
       }
     })
     .catch((error) => {
-      if(error.response.data.message){
+      if(error.response.data){
         logger.error(`Failed to find COVID-19 sample type with message: ${error.response.data.message}
-                    Error: ${error.response.data.errors}`);
+                    Error: ${error.response.data}`);
         process.exitCode = 8;
       } else { // if there was no error message, it's likely that we didn't authenticate correctly
         logger.error(`Failed to find COVID-19 sample type. Check that authentication was successful.`);
