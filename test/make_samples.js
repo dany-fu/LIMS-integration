@@ -61,18 +61,12 @@ async function init(){
   }
   axios.defaults.headers.common['Authorization'] = token;
 
-  if (!auth || auth !== 200){
-    logger.error(`Failed to log into eLabs.`);
-    process.exitCode = 8;
-    return null;
-  }
-
   return await getCovidSampleTypeMetas();
 }
 
 async function makeBatchSamples(){
 
-  let metas = init();
+  let metas = await init();
   if (!metas){
     logger.error(`No meta data.`);
     process.exitCode = 8;
@@ -120,13 +114,48 @@ async function makeSample(name){
     });
 }
 
-async function parse_logfile(logfile){
+async function noActiveSample(barcode){
+  let endpoint = `${config.get('endpoints.samples')}` +
+    `?sampleTypeID=${config.get('covidSampleTypeId')}` +
+    `&name=${barcode}`;
 
-  let auth = await login();
-  if (!auth || auth !== 200){
-    logger.error(`Failed to log into eLabs.`);
-    return;
-  }
+  return axios.get(endpoint)
+    .then((res) => {
+      if(res.status === 200){
+        return res.data.data.length === 0;
+      } else {
+        logger.error(`Failed to get sample: ${barcode} with status: ${res.status}.`);
+      }
+    })
+    .catch((error) => {
+      logger.error(`Failed to get sample: ${barcode} with message: ${error.response.data.message}
+                    Error: ${error.response.data.errors}. 
+                    SAMPLE BC:${barcode} NOT PROCESSED.`);
+      process.exitCode = 8;
+      return null;
+    });
+}
+
+async function deleteSample(sampleID){
+  return axios.delete(`https://bu-acc.elabjournal.com/api/v1/samples/${sampleID}`)
+    .then((res) => {
+      if(res.status === 200){
+        logger.info(`Deleted sample ${sampleID}`);
+      } else {
+        logger.error(`Failed to delete sample ${sampleID} with status: ${res.status}`);
+      }
+    })
+    .catch((error) => {
+      logger.error(`Failed to delete sample: ${sampleID} with message: ${error.response.data.message}
+                    Error: ${error.response.data.errors}`);
+      process.exitCode = 8;
+      return null;
+    });
+}
+
+async function makeSamplesFromLog(logfile){
+
+  await init();
 
   let readStream = fs.createReadStream(logfile);
   readStream.pipe(csv.parse({
@@ -138,14 +167,16 @@ async function parse_logfile(logfile){
       logger.error(error);
       process.exitCode = 8;
     })
-    .on('data', (row) => {
+    .on('data', async (row) => {
       let sampleBC = row[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC];
-      makeSample(sampleBC);
+      if(await noActiveSample(sampleBC)){
+        makeSample(sampleBC);
+      }
     })
     .on('end', (rowCount) => logger.info(`Parsed ${rowCount} records`));
 }
 
-parse_logfile(argv.file);
+makeSamplesFromLog(argv.file);
 //makeBatchSamples();
 
 process.on('unhandledRejection', (reason, promise) => {
