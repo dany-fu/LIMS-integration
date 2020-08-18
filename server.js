@@ -139,13 +139,15 @@ async function updateMeta({sampleId, key, value, type, metaId}={}){
       }
     })
     .catch((error) => {
-      if(error.response.data){
-        logger.error(`Failed to update sample: ${sampleId}, meta field: ${key} 
-                    with message ${error.response.data.message}. Error: ${error.response.data}.
-                    SAMPLE ID:${sampleId} NOT CORRECTLY PROCESSED.`);
+      if(error.response){
+        logger.error(`Failed to update sample: ${sampleId}, meta field: ${key}. Status: ${error.response.status}. 
+                      StatusText: ${error.response.statusText}. SAMPLE ID:${sampleId} NOT CORRECTLY PROCESSED.`);
+        if(error.response.data){
+          logger.error(`Error Message: ${error.response.data.message}. Error: ${error.response.data}`);
+        }
       } else {
-        logger.error(`Failed to update sample: ${sampleId}, meta field: ${key} with message ${error.response}. 
-                      SAMPLE ID:${sampleId} NOT CORRECTLY PROCESSED.`);
+        logger.error(`No response received from ELAB when updating meta field. Try again later.`);
+        logger.error(`Error dump: ${error}`);
       }
       process.exitCode = 8;
       return null;
@@ -188,13 +190,15 @@ async function getPatientSample(barcode){
       }
     })
     .catch((error) => {
-      if(error.response.data){
-        logger.error(`Failed to get sample: ${barcode} with message: ${error.response.data.message}
-                    Error: ${error.response.data}. 
-                    SAMPLE BC:${barcode} NOT PROCESSED.`);
+      if(error.response){
+        logger.error(`Failed to get sample: ${barcode}. Status: ${error.response.status}. 
+                      StatusText: ${error.response.statusText}. SAMPLE BC:${barcode} NOT PROCESSED.`);
+        if(error.response.data){
+          logger.error(`Error Message: ${error.response.data.message}. Error: ${error.response.data}`);
+        }
       } else {
-        logger.error(`Failed to get sample: ${barcode} with message ${error.response}. 
-                      SAMPLE ID:${barcode} NOT CORRECTLY PROCESSED.`);
+        logger.error(`No response received from ELAB when fetching sample. Try again later.`);
+        logger.error(`Error dump: ${error}`);
       }
       process.exitCode = 8;
       return null;
@@ -219,14 +223,17 @@ async function getCovidSampleTypeMetas(){
       }
     })
     .catch((error) => {
-      if(error.response.data){
-        logger.error(`Failed to find COVID-19 sample type with message: ${error.response.data.message}
-                    Error: ${error.response.data}`);
-        process.exitCode = 8;
-      } else { // if there was no error message, it's likely that we didn't authenticate correctly
-        logger.error(`Failed to find COVID-19 sample type. Check that authentication was successful.`);
-        process.exitCode = 8;
+      if(error.response){
+        logger.error(`Failed to find COVID-19 sample type. Status: ${error.response.status}. 
+                      StatusText: ${error.response.statusText}`);
+        if(error.response.data){
+          logger.error(`Error Message: ${error.response.data.message}. Error: ${error.response.data}`);
+        }
+      } else {
+        logger.error(`No response received from ELAB when fetching COVID-19 sample type. Try again later.`);
+        logger.error(`Error dump: ${error}`);
       }
+      process.exitCode = 8;
       return null;
     });
 }
