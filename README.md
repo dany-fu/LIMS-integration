@@ -80,7 +80,7 @@ F  NEC_2  |  NEC_4
     plates re-prepped. 
     
 **Any samples that fail twice in this process are considered invalid and need to be recollected.
-Status is to be considered qPCR complete.**
+Status is to be considered Finished.**
 
 ### qPCR Plate Layout
 

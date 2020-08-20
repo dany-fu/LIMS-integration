@@ -552,7 +552,7 @@ async function updateFailed(sampleObj, metas, statusConst){
       key: constants.META.STATUS,
       value: constants.STATUS_VAL.QPCR_DONE,
       type: status.sampleDataType,
-      metaId: status.sampleTypeMetaID}); //update status to "qPCR Complete"
+      metaId: status.sampleTypeMetaID}); //update status to "Finished"
   }
 }
 
