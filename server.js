@@ -141,10 +141,8 @@ async function updateMeta({sampleId, key, value, type, metaId}={}){
     .catch((error) => {
       if(error.response){
         logger.error(`Failed to update sample: ${sampleId}, meta field: ${key}. Status: ${error.response.status}. 
-                      StatusText: ${error.response.statusText}. SAMPLE ID:${sampleId} NOT CORRECTLY PROCESSED.`);
-        if(error.response.data){
-          logger.error(`Error Message: ${error.response.data.message}. Error: ${error.response.data}`);
-        }
+                      StatusText: ${error.response.statusText}. Error Message: ${error.response.data}.
+                      SAMPLE ID:${sampleId} NOT CORRECTLY PROCESSED.`);
       } else {
         logger.error(`No response received from ELAB when updating meta field. Try again later.`);
         logger.error(`Error dump: ${error}`);
@@ -192,10 +190,8 @@ async function getPatientSample(barcode){
     .catch((error) => {
       if(error.response){
         logger.error(`Failed to get sample: ${barcode}. Status: ${error.response.status}. 
-                      StatusText: ${error.response.statusText}. SAMPLE BC:${barcode} NOT PROCESSED.`);
-        if(error.response.data){
-          logger.error(`Error Message: ${error.response.data.message}. Error: ${error.response.data}`);
-        }
+                      StatusText: ${error.response.statusText}. Error Message: ${error.response.data}.
+                      SAMPLE BC:${barcode} NOT PROCESSED.`);
       } else {
         logger.error(`No response received from ELAB when fetching sample. Try again later.`);
         logger.error(`Error dump: ${error}`);
@@ -225,10 +221,7 @@ async function getCovidSampleTypeMetas(){
     .catch((error) => {
       if(error.response){
         logger.error(`Failed to find COVID-19 sample type. Status: ${error.response.status}. 
-                      StatusText: ${error.response.statusText}`);
-        if(error.response.data){
-          logger.error(`Error Message: ${error.response.data.message}. Error: ${error.response.data}`);
-        }
+                      StatusText: ${error.response.statusText}. Error Message: ${error.response.data}.`);
       } else {
         logger.error(`No response received from ELAB when fetching COVID-19 sample type. Try again later.`);
         logger.error(`Error dump: ${error}`);
