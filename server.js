@@ -20,11 +20,10 @@ const myFormat = printf(({ level, message, timestamp }) => {
 });
 let today = new Date().toLocaleDateString("en-US", {timeZone: "America/New_York"});
 let todayFormatted = today.substring(0, 10).replace(/\//g, "-");
-let now = new Date().toLocaleString("en-US", {timeZone: "America/New_York"});
 const logger = createLogger({
   format: combine(
     timestamp({
-      format: now
+      format: 'M/D/YYYY, hh:mm:ss A Z'
     }),
     myFormat
   ),

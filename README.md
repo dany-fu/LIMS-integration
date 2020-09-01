@@ -16,6 +16,13 @@ This repository contains code for
 7) Enter in eLabs username and password in the the config files in `/config`    
 8) The NODE_ENV variable must be set which matches one of the config file names. For example, `export NODE_ENV=sandbox`
 
+### Logging
+* Daily error logs will print to `logs/error-M-DD-YYYY.log`    
+* Daily combined logs (both errors and info) will print to `logs/combined-M-DD-YYYY.log`    
+* The timestamp in each file will default to the timezone of the server, and are formatted as `M/D/YYYY, hh:mm:ss A Z`, 
+where Z is the offset from UTC  
+  - For example, a server configured to EST will be displayed as `9/1/2020, 11:04:24 AM -04:00`
+
 ### Processing Requirements 
 * Hamilton output format   
    - We expect 2 empty lines at the start of the file    
