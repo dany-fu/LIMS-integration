@@ -287,9 +287,9 @@ async function getCovidSampleTypeMetas(){
  * @param destWellNum Output well number
  * @param user Technician initials
  * @param serialNum Serial number of the Hamilton robot
- * @returns {Promise<void>}
+ * @returns {*} Array of meta objects to be updated
  */
-async function samplePrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
+function samplePrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
   let metaArray = [];
 
   const dwBC = metas.find(m => m.key === constants.META.DEEPWELL_BC);
@@ -327,7 +327,7 @@ async function samplePrepTracking(sampleID, metas, destBC, destWellNum, user, se
     type: snMeta.sampleDataType,
     metaID: snMeta.sampleTypeMetaID})); //update "Sample Aliquot Instrument SN"
 
-  updateMetas(sampleID, metaArray);
+  return metaArray;
 }
 
 /**
@@ -339,9 +339,9 @@ async function samplePrepTracking(sampleID, metas, destBC, destWellNum, user, se
  * @param destWellNum Output well number
  * @param user Technician initials
  * @param serialNum Serial number of the Hamilton robot
- * @returns {Promise<void>}
+ * @returns {*} Array of meta objects to be updated
  */
-async function rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
+function rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
   let metaArray = [];
 
   const rnaBC = metas.find(m => m.key === constants.META.RNA_PLATE_BC);
@@ -379,7 +379,7 @@ async function rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user,
     type: snMeta.sampleDataType,
     metaID: snMeta.sampleTypeMetaID})); //update "RNA Extraction Instrument SN"
 
-  updateMetas(sampleID, metaArray);
+  return metaArray;
 }
 
 /**
@@ -391,7 +391,7 @@ async function rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user,
  * @param destWellNum Output well number
  * @param user Technician initials
  * @param serialNum Serial number of the Hamilton robot
- * @returns {Promise<void>}
+ * @returns {*} Array of meta objects to be updated
  */
 function qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
   let metaArray = [];
@@ -431,7 +431,7 @@ function qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum)
     type: snMeta.sampleDataType,
     metaID: snMeta.sampleTypeMetaID})); //update "qPCR Prep Instrument SN"
 
-  updateMetas(sampleID, metaArray);
+  return metaArray;
 }
 
 /**
@@ -440,6 +440,7 @@ function qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum)
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param reagentNames Array of reagent names used
  * @param reagentNums Array of reagent lot numbers, matches the names by index
+ * @returns {*} Array of meta objects to be updated
  */
 function reagentTracking(sampleID, metas, reagentNames, reagentNums){
   reagentNames = stringToArray(reagentNames);
@@ -466,7 +467,8 @@ function reagentTracking(sampleID, metas, reagentNames, reagentNums){
       process.exitCode = 8;
     }
   }
-  updateMetas(sampleID, metaArray);
+
+  return metaArray;
 }
 
 /**
@@ -478,18 +480,16 @@ function reagentTracking(sampleID, metas, reagentNames, reagentNums){
  * @param destWellNum Output well number
  * @param user Technician initials
  * @param serialNum Serial number of the Hamilton robot
+ * @returns {*} Array of meta objects to be updated
  */
 function lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, serialNum){
   switch(protocol){
     case constants.ORIGIN_VAL.SAMPLE_ALIQUOT:
-      samplePrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
-      break;
+      return samplePrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
     case constants.ORIGIN_VAL.RNA_EXTRACTION:
-      rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
-      break;
+      return rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
     case constants.ORIGIN_VAL.QPCR_PREP:
-      qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
-      break;
+      return qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
   }
 }
 
@@ -519,17 +519,21 @@ async function hamiltonTracking(csvRow, metas){
     return;
   }
 
+  let metaArray = []; //so we can update all the fields from the csv row in one API call
+
   let sampleID = getSampleId(sampleObj);
   let reagentNames = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NAMES];
   let reagentNums = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NUMS];
-  reagentTracking(sampleID, metas, reagentNames, reagentNums);
+  metaArray.push(...reagentTracking(sampleID, metas, reagentNames, reagentNums));
 
 
   let destBC = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_BC];
   let destWellNum = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_WELL_NUM];
   let user = csvRow[constants.HAMILTON_LOG_HEADERS.USER];
   let serialNum = csvRow[constants.HAMILTON_LOG_HEADERS.SERIAL_NUM];
-  lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, serialNum);
+  metaArray.push(...lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, serialNum));
+
+  updateMetas(sampleID, metaArray);
 }
 
 
@@ -541,22 +545,20 @@ async function hamiltonTracking(csvRow, metas){
  * Increases number of attempt by 1 if allowed and returns the total number of attempts
  * @param sampleObj data object of the sample from eLab
  * @param metas Array of meta fields associated with the COVID-19 SampleType
- * @returns {Promise<*>}
+ * @returns {*} Meta object for number of attempts
  */
-async function increaseAttempt(sampleObj, metas){
+function increaseAttempt(sampleObj, metas){
   // Check number of attempts
   let numAttempt = getNumAttempts(sampleObj);
-
   if (numAttempt < 2){
-    let sampleID = getSampleId(sampleObj);
-    const attemptMeta = metas.find(m => m.key === constants.META.NUM_ATTEMPTS);
-    await updateMeta({sampleID:sampleID,
-      key: constants.META.NUM_ATTEMPTS,
-      value: ++numAttempt,
-      type: attemptMeta.sampleDataType,
-      metaID: attemptMeta.sampleTypeMetaID}); //Increase number of attempts by 1
+    ++numAttempt; //Increase number of attempts by 1
   }
-  return numAttempt;
+
+  const attemptMeta = metas.find(m => m.key === constants.META.NUM_ATTEMPTS);
+  return createMetaObj({key: constants.META.NUM_ATTEMPTS,
+    value: numAttempt,
+    type: attemptMeta.sampleDataType,
+    metaID: attemptMeta.sampleTypeMetaID});
 }
 
 /**
@@ -564,16 +566,13 @@ async function increaseAttempt(sampleObj, metas){
  * @param sampleObj data object of the sample from eLab
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param statusConst Either "Re-run qPCR" or "Re-run RNA Extraction"
- * @returns {Promise<void>}
+ * @param numAttempt Number of attempts for this sample
+ * @returns {*} Array of meta objects to be updated
  */
-async function updateFailed(sampleObj, metas, statusConst){
-  let sampleID = getSampleId(sampleObj);
-  let numAttempt = await increaseAttempt(sampleObj, metas);
-
+function updateFailed(sampleObj, metas, statusConst, numAttempt){
+  let metaArray = [];
   const result = metas.find(m => m.key === constants.META.RESULT);
   const status = metas.find(m => m.key === constants.META.STATUS);
-
-  let metaArray = [];
 
   // If it's less than 2, we can rerun
   if (numAttempt < 2){
@@ -598,7 +597,7 @@ async function updateFailed(sampleObj, metas, statusConst){
       metaID: status.sampleTypeMetaID})); //update status to "Finished"
   }
 
-  updateMetas(sampleID, metaArray);
+  return metaArray;
 }
 
 /**
@@ -606,30 +605,29 @@ async function updateFailed(sampleObj, metas, statusConst){
  * @param sampleObj data object of the sample from eLab
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param call Result of the well from the Call column of the qPCR output
- * @returns {Promise<void>}
+ * @returns {*} Array of meta objects to be updated
  */
-async function updatePassed(sampleObj, metas, call){
-  let sampleID = getSampleId(sampleObj);
-  increaseAttempt(sampleObj, metas);
-
+function updatePassed(sampleObj, metas, call){
   let metaArray = [];
+
   const result = metas.find(m => m.key === constants.META.RESULT);
   metaArray.push(createMetaObj({key: constants.META.RESULT,
     value: constants.TEST_RESULT[call],
     type: result.sampleDataType,
     metaID: result.sampleTypeMetaID})); //update COVID-19 Test Result
 
-
   const status = metas.find(m => m.key === constants.META.STATUS);
   metaArray.push(createMetaObj({key: constants.META.STATUS,
     value: constants.STATUS_VAL.QPCR_DONE,
     type: status.sampleDataType,
-    metaID: status.sampleTypeMetaID})); //update status to "qPCR Complete"
+    metaID: status.sampleTypeMetaID})); //update status to "Finished"
 
-  updateMetas(sampleID, metaArray);
+  return metaArray;
 }
 
 /**
+ * Main function for updating data from the Well Call file
+ *
  * Update "call" of the test, results can be POSITIVE, NEGATIVE, INVALID, INCONCLUSIVE, or WARNING
  * INVALID or INCONCLUSIVE results both require recollection of sample
  * WARNING occurs when controls failed, and can be reattempted up to 1 more time
@@ -668,18 +666,24 @@ async function updateTestResult(csvRow, metas, failedWells, user, serialNum){
     value: serialNum,
     type: snNumMeta.sampleDataType,
     metaID: snNumMeta.sampleTypeMetaID})); //update "qPCR SN"
-  updateMetas(sampleID, metaArray);
+
+  let numAttemptMetaObj = increaseAttempt(sampleObj, metas);
+  metaArray.push(numAttemptMetaObj);
 
   let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
   if (wellNum in failedWells){
-    updateFailed(sampleObj, metas, failedWells[wellNum]);
+    metaArray.push(...updateFailed(sampleObj, metas, failedWells[wellNum], numAttemptMetaObj.value));
   } else {
     let call = csvRow[constants.QPCR_LOG_HEADERS.CALL];
-    updatePassed(sampleObj, metas, call)
+    metaArray.push(...updatePassed(sampleObj, metas, call));
   }
+
+  updateMetas(sampleID, metaArray);
 }
 
 /**
+ * Main function for updating data from the Target Call file
+ *
  * Updates PatientSample with CT values from the QuantStudio
  * @param csvRow
  * @param metas Array of meta fields associated with the COVID-19 SampleType
