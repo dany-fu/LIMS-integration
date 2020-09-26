@@ -684,32 +684,43 @@ async function updateTestResult(csvRow, metas, failedWells, user, serialNum){
 /**
  * Main function for updating data from the Target Call file
  *
- * Updates PatientSample with CT values from the QuantStudio
+ * Updates PatientSample with CT values from the QuantStudio. Stores CT values
+ * internally until all 3 have been read, then writes them at once to eLab.
  * @param csvRow
  * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param allSampleCTs dictionary of eLab sampleID to array of CT value meta objects
  * @returns {Promise<void>}
  */
-async function updateCTValues(csvRow, metas){
+async function updateCTValues(csvRow, metas, allSampleCTs){
   let sampleBC = csvRow[constants.QPCR_LOG_HEADERS.SAMPLE];
   if (isControl(sampleBC)) {
     return;
   }
 
-  let sampleObj = await getPatientSample(sampleBC);
-  if(!sampleObj){
-    process.exitCode = 8;
-    return;
+  if(!(sampleBC in allSampleCTs)){
+    allSampleCTs[sampleBC] = [];
   }
 
-  let sampleID = getSampleId(sampleObj);
   let target = csvRow[constants.QPCR_LOG_HEADERS.TARGET];
   let cq = csvRow[constants.QPCR_LOG_HEADERS.CQ];
   const targetMeta = metas.find(m => m.key === constants.META[target]);
-  updateMeta({sampleID:sampleID,
-    key: constants.META[target],
+  allSampleCTs[sampleBC].push(createMetaObj({key: constants.META[target],
     value: cq,
     type: targetMeta.sampleDataType,
-    metaID: targetMeta.sampleTypeMetaID}); //update CT value
+    metaID: targetMeta.sampleTypeMetaID}));
+
+  if(allSampleCTs[sampleBC].length === 3){
+    let sampleObj = await getPatientSample(sampleBC);
+    if(!sampleObj){
+      process.exitCode = 8;
+      return;
+    }
+
+    let sampleID = getSampleId(sampleObj);
+    updateMetas(sampleID, allSampleCTs[sampleBC]);
+  }
+
+  return Promise.resolve(true);
 }
 
 /**
@@ -763,17 +774,19 @@ function getFailureWells(failedControls){
  * @param qPCRSerialNum Required for Well Call file
  */
 function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
-  let readStream = fs.createReadStream(logfile);
-  readStream.pipe(csv.parse({
+  let allSampleCTs = {};
+  let parser = csv.parseFile(logfile, {
     headers:true,
     comment:"#", //ignore lines that begin with #
-    skipLines:2 })
+    skipLines:2 }
   )
-    .on('data', (row) => {
+    .on('data', async (row) => {
       if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
         hamiltonTracking(row, metas);
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
-        updateCTValues(row, metas);
+        parser.pause();
+        await updateCTValues(row, metas, allSampleCTs);
+        parser.resume();
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
         updateTestResult(row, metas, failedWells, qPCRUser, qPCRSerialNum);
       }
@@ -781,7 +794,7 @@ function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
     .on('error', (error) => {
       logger.error(error);
       process.exitCode = 8;
-      readStream.destroy();
+      parser.end();
     })
     .on('end', (rowCount) => logger.info(`Parsed ${rowCount} records`));
 }
