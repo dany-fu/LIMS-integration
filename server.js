@@ -2,7 +2,7 @@
 
 const ax = require("axios").default;
 const rateLimit = require("axios-rate-limit");
-const axios = rateLimit(ax.create(), { maxRequests: 25, perMilliseconds: 1000});
+const axios = rateLimit(ax.create(), { maxRequests: 5, perMilliseconds: 1000});
 const csv = require("fast-csv");
 const fs = require("fs");
 const argv = require("minimist")(process.argv.slice(2));
