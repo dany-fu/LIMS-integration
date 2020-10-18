@@ -509,7 +509,7 @@ async function hamiltonTracking(csvRow, metas){
 function increaseAttempt(sampleObj, metas){
   // Check number of attempts
   let numAttempt = getNumAttempts(sampleObj);
-  if (numAttempt < 2){
+  if (numAttempt < constants.MAX_ATTEMPTS){
     ++numAttempt; //Increase number of attempts by 1
   }
 
@@ -533,8 +533,8 @@ function updateFailed(sampleObj, metas, statusConst, numAttempt){
   const result = metas.find(m => m.key === constants.META.RESULT);
   const status = metas.find(m => m.key === constants.META.STATUS);
 
-  // If it's less than 2, we can rerun
-  if (numAttempt < 2){
+  // If it's less than 5, we can rerun
+  if (numAttempt < constants.MAX_ATTEMPTS){
     metaArray.push(createMetaObj({key: constants.META.RESULT,
       value: constants.TEST_RESULT.WARNING,
       type: result.sampleDataType,
@@ -589,8 +589,8 @@ function updatePassed(sampleObj, metas, call){
  *
  * Update "call" of the test, results can be POSITIVE, NEGATIVE, INVALID, INCONCLUSIVE, or WARNING
  * INVALID or INCONCLUSIVE results both require recollection of sample
- * WARNING occurs when controls failed, and can be reattempted up to 1 more time
- * If controls fail during attempt #2, a recollection is required
+ * WARNING occurs when controls failed, and can be reattempted up to 4 more times
+ * If controls fail during attempt #5, a recollection is required
  * @param csvRow
  * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param failedWells Dictionary of all possible failed wells and their respective status
