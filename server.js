@@ -472,15 +472,18 @@ async function hamiltonTracking(csvRow, metas){
     return;
   }
 
-  let sampleObj = await getPatientSample(sampleBC);
-  if(!sampleObj){
-    process.exitCode = 8;
-    return;
+  let sampleID = csvRow[constants.HAMILTON_LOG_HEADERS.ELAB_ID];
+  // fetch from eLab if not found in Hamilton log
+  if(isEmpty(sampleID)){
+    let sampleObj = await getPatientSample(sampleBC);
+    if(!sampleObj){
+      process.exitCode = 8;
+      return;
+    }
+    sampleID = getSampleId(sampleObj);
   }
 
   let metaArray = []; //so we can update all the fields from the csv row in one API call
-
-  let sampleID = getSampleId(sampleObj);
   let reagentNames = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NAMES];
   let reagentNums = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NUMS];
   metaArray.push(...reagentTracking(sampleID, metas, reagentNames, reagentNums));

@@ -57,7 +57,8 @@ const HAMILTON_LOG_HEADERS = {
   REAGENT_NAMES: "Reagent Names",
   REAGENT_NUMS: "Reagent Lot Numbers",
   USER: "UserName",
-  SERIAL_NUM: "Machine SN"
+  SERIAL_NUM: "Machine SN",
+  ELAB_ID: "eLab Sample ID"
 };
 
 const QPCR_LOG_HEADERS = {
