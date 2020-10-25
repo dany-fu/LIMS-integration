@@ -6,5 +6,6 @@
     "createSample": "https://sandbox.elabjournal.com/api/v1/samples?autoCreateMetaDefaults=true",
     "sampleTypes": "https://sandbox.elabjournal.com/api/v1/sampleTypes",
     "samples": "https://sandbox.elabjournal.com/api/v1/samples"
-  }
+  },
+  "donePath": ""
 }

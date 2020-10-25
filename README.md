@@ -35,6 +35,7 @@ where Z is the offset from UTC
       - `Machine SN`  
       - `Reagent Names` - strings in this file must match exactly the field it maps to on eLabs       
       - `Reagent Lot Numbers` - length of this array must match length of reagent names       
+      - `eLab Sample ID` - can be blank
 * QuantStudio output format   
    - We expect 2 additional lines between the comments and headers     
    - For Ct values, we expect the Target Call file to have the headers    
@@ -86,7 +87,7 @@ F  NEC_2  |  NEC_4
     - For example, if PCR_POS and NTC_1 both fail, Plate 1 needs to be re-extracted, and the other 3 
     plates re-prepped. 
     
-**Any samples that fail twice in this process are considered invalid and need to be recollected.
+**Any samples that fail 5x in this process are considered invalid and need to be recollected.
 Status is to be considered Finished.**
 
 ### qPCR Plate Layout
@@ -94,3 +95,9 @@ Status is to be considered Finished.**
 ![qPCR_plate](https://user-images.githubusercontent.com/7750862/87336835-7b7a9080-c510-11ea-9b4e-a54849ea1426.png)
 
 Key: Plate 1 (Red), Plate 2 (Green), Plate 3 (Yellow), Plate 4 (Blue)
+
+### eLab ID Prefetch Procedure
+1) Powershell script checks `todo` folder every 30 seconds
+2) When a file is found, Powershell script will move file to `in-progress` and invoke this script with the file
+3) Script adds a new column `eLab Sample ID` with the IDs *or* error values: `NOT FOUND`, `DUPLICATE`, or `ERROR`
+4) Script moves file to `done` folder when writing is complete

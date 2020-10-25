@@ -6,7 +6,8 @@ const axios = rateLimit(ax.create(), { maxRequests: 5, perMilliseconds: 1000});
 const csv = require("fast-csv");
 const fs = require("fs");
 const argv = require("minimist")(process.argv.slice(2));
-const config = require('config');
+const config = require("config");
+const path = require("path");
 const constants = require("./constants.js");
 
 /*****************
@@ -156,9 +157,10 @@ async function updateMetas(sampleID, metaArray){
  * Find a Covid-19 Sample with the given barcode (which is also its name)
  * Returns null if more than one sample can be found with the same barcode
  * @param barcode Name of the sample
+ * @param prefetch Boolean, returns error codes for Hamilton if true
  * @returns {Promise<void>} Sample object with all custom fields if found, else Null
  */
-async function getPatientSample(barcode){
+async function getPatientSample(barcode, prefetch=false){
   let endpoint = `${config.get('endpoints.samples')}` +
     `?$expand=meta&sampleTypeID=${config.get('covidSampleTypeId')}` +
     `&name=${barcode}`;
@@ -167,10 +169,10 @@ async function getPatientSample(barcode){
     .then((res) => {
       if(res.status === 200){
         if(res.data.data.length === 0){
-          process.exitCode = 8;
           logger.error(`Sample for barcode ID ${barcode} not found. 
                         SAMPLE BC:${barcode} NOT PROCESSED.`);
-          return null;
+          process.exitCode = 8;
+          return (prefetch? 'NOT FOUND' : null);
         }
         else if(res.data.data.length === 1){
           logger.info(`Got sample with barcode ${barcode}, statusCode: ${res.status}`);
@@ -179,12 +181,12 @@ async function getPatientSample(barcode){
           logger.error(`More than one sample found with name ${barcode}. 
                         SAMPLE BC:${barcode} NOT PROCESSED.`);
           process.exitCode = 8;
-          return null;
+          return (prefetch? 'DUPLICATE' : null);
         }
       } else{
         logger.error(res.data);
         process.exitCode = 8;
-        return null;
+        return (prefetch? 'ERROR' : null);
       }
     })
     .catch((error) => {
@@ -197,7 +199,7 @@ async function getPatientSample(barcode){
         logger.error(`Error dump: ${error}`);
       }
       process.exitCode = 8;
-      return null;
+      return (prefetch? 'ERROR' : null);
     });
 }
 
@@ -475,6 +477,7 @@ async function hamiltonTracking(csvRow, metas){
   let sampleID = csvRow[constants.HAMILTON_LOG_HEADERS.ELAB_ID];
   // fetch from eLab if not found in Hamilton log
   if(isEmpty(sampleID)){
+    logger.info(`SampleID for barcode ${sampleBC} not found in Hamilton log. Fetching again.`);
     let sampleObj = await getPatientSample(sampleBC);
     if(!sampleObj){
       process.exitCode = 8;
@@ -728,6 +731,26 @@ function getFailureWells(failedControls){
 }
 
 /**
+ * Returns the eLab ID for the given row's barcode
+ * or a string indicating error
+ * @param csvRow
+ * @returns {Promise<any>}
+ */
+async function getElabID(csvRow){
+  let sampleBC = csvRow[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC];
+  let sampleObj = await getPatientSample(sampleBC, true);
+
+  let sampleID;
+  if (typeof sampleObj === 'string'){
+    sampleID = sampleObj;
+  } else {
+    sampleID = getSampleId(sampleObj)
+  }
+
+  return Promise.resolve(sampleID);
+}
+
+/**
  * Handles parsing of all Hamilton and QuantStudio CSV output
  * @param logfile Output from Hamilton or QuantStudio
  * @param metas Array of meta fields associated with the COVID-19 SampleType
@@ -737,14 +760,27 @@ function getFailureWells(failedControls){
  */
 function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
   let allSampleCTs = {};
+  let write = false;
+  let promises = [];
+  let idRows = [[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC, constants.HAMILTON_LOG_HEADERS.ELAB_ID]];
   let parser = csv.parseFile(logfile, {
     headers:true,
     comment:"#", //ignore lines that begin with #
     skipLines:2 }
   )
     .on('data', async (row) => {
+      // DO NOT CHANGE ORDER
       if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
         hamiltonTracking(row, metas);
+      } else if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC)){
+        write = true;
+        let p = getElabID(row).then((elabID) => {
+            idRows.push({
+              [constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC]: row[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC],
+              [constants.HAMILTON_LOG_HEADERS.ELAB_ID]: elabID
+            });
+        });
+        promises.push(p);
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
         parser.pause();
         await updateCTValues(row, metas, allSampleCTs);
@@ -758,7 +794,28 @@ function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
       process.exitCode = 8;
       parser.end();
     })
-    .on('end', (rowCount) => logger.info(`Parsed ${rowCount} records`));
+    .on('end', async (rowCount) => {
+      logger.info(`Parsed ${rowCount} records`);
+
+      if (write) {
+        Promise.all(promises).then(() => {
+          let donePath = config.get('donePath');
+          if (isEmpty(donePath)){
+            logger.error(`Done path not found. Sample IDs for file ${logfile} could not be written.`);
+            return;
+          }
+
+          // overwrite the original logfile
+          logger.info(`Writing eLab IDs to file`);
+          csv.writeToPath(logfile, idRows);
+
+          // move file to done
+          let newPath = path.join(donePath, path.basename(logfile));
+          fs.renameSync(logfile, newPath);
+          logger.info(`Moved ${logfile} to ${newPath}`);
+        });
+      }
+    });
 }
 
 async function main(logfile){
