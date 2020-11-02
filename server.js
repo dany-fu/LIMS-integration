@@ -17,7 +17,7 @@ const constants = require("./constants.js");
 const { createLogger, format, transports } = require('winston');
 const { combine, timestamp, printf } = format;
 const myFormat = printf(({ level, message, timestamp }) => {
-  return `{${timestamp} ${level}: ${message}}`;
+  return `${timestamp} <${level}> ${message} </${level}>`;
 });
 let today = new Date().toLocaleDateString("en-US", {timeZone: "America/New_York"});
 let todayFormatted = today.substring(0, 10).replace(/\//g, "-");
@@ -138,8 +138,8 @@ async function updateMetas(sampleID, metaArray, retries=5){
           logger.error(`Error occurred during metas update for sampleID ${sampleID}. Trying again.`);
           return updateMetas(sampleID, metaArray, retries - 1);
         } else {
-          logger.error(`Failed to batch update sample after 5 attempts: ${sampleID};
-                        Error: ${res.data}. SAMPLE ID:${sampleID} NOT CORRECTLY PROCESSED.`);
+          logger.error(`Failed to batch update sample after 5 attempts; Error: ${res.data}. 
+                        SAMPLE ID:${sampleID} NOT CORRECTLY PROCESSED.`);
           process.exitCode = 8;
           return null;
         }
@@ -181,8 +181,7 @@ async function getPatientSample(barcode, prefetch=false, retries=5){
     .then((res) => {
       if(res.status === 200){
         if(res.data.data.length === 0){
-          logger.error(`Sample for barcode ID ${barcode} not found. 
-                        SAMPLE BC:${barcode} NOT PROCESSED.`);
+          logger.error(`Sample for barcode ID ${barcode} not found. SAMPLE BC:${barcode} NOT PROCESSED.`);
           process.exitCode = 8;
           return (prefetch? 'NOT FOUND' : null);
         }
@@ -190,8 +189,7 @@ async function getPatientSample(barcode, prefetch=false, retries=5){
           logger.info(`Got sample with barcode ${barcode}, statusCode: ${res.status}`);
           return res.data;
         } else {
-          logger.error(`More than one sample found with name ${barcode}. 
-                        SAMPLE BC:${barcode} NOT PROCESSED.`);
+          logger.error(`More than one sample found with name ${barcode}. SAMPLE BC:${barcode} NOT PROCESSED.`);
           process.exitCode = 8;
           return (prefetch? 'DUPLICATE' : null);
         }
@@ -212,7 +210,7 @@ async function getPatientSample(barcode, prefetch=false, retries=5){
         return getPatientSample(barcode, prefetch, retries-1);
       } else {
         if(error.response){
-          logger.error(`Failed to get sample after 5 attempts: ${barcode}. Status: ${error.response.status}. 
+          logger.error(`Failed to get sample after 5 attempts. Status: ${error.response.status}. 
                       StatusText: ${error.response.statusText}. Error Message: ${error.response.data}.
                       SAMPLE BC:${barcode} NOT PROCESSED.`);
         } else {
@@ -853,6 +851,7 @@ function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
 
 async function main(logfile){
   logger.info(logfile);
+  logger.error(`**${logfile}**`);
 
   let token = config.get('authToken');
   if (isEmpty(token)){
