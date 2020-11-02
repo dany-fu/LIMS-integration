@@ -5,6 +5,5 @@
     "createSample": "https://bu.elabjournal.com/api/v1/samples?autoCreateMetaDefaults=true",
     "sampleTypes": "https://bu.elabjournal.com/api/v1/sampleTypes",
     "samples": "https://bu.elabjournal.com/api/v1/samples"
-  },
-  "donePath": ""
+  }
 }

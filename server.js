@@ -830,20 +830,9 @@ function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
 
       if (write) {
         Promise.all(promises).then(() => {
-          let donePath = config.get('donePath');
-          if (isEmpty(donePath)){
-            logger.error(`Done path not found. Sample IDs for file ${logfile} could not be written.`);
-            return;
-          }
-
           // overwrite the original logfile
           logger.info(`Writing eLab IDs to file`);
           csv.writeToPath(logfile, idRows);
-
-          // move file to done
-          let newPath = path.join(donePath, path.basename(logfile));
-          fs.renameSync(logfile, newPath);
-          logger.info(`Moved ${logfile} to ${newPath}`);
         });
       }
     });
