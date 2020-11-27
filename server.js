@@ -833,6 +833,7 @@ function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
           // overwrite the original logfile
           logger.info(`Writing eLab IDs to file`);
           csv.writeToPath(logfile, idRows);
+          process.exitCode = 14;
         });
       }
     });
