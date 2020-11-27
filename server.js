@@ -529,7 +529,7 @@ async function hamiltonTracking(csvRow, metas){
   let serialNum = csvRow[constants.HAMILTON_LOG_HEADERS.SERIAL_NUM];
   metaArray.push(...lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, serialNum));
 
-  updateMetas(sampleID, metaArray);
+  return Promise.resolve(await updateMetas(sampleID, metaArray));
 }
 
 
@@ -674,7 +674,7 @@ async function updateTestResult(csvRow, metas, failedWells, user, serialNum){
     metaArray.push(...updatePassed(sampleObj, metas, call));
   }
 
-  updateMetas(sampleID, metaArray);
+  return Promise.resolve(await updateMetas(sampleID, metaArray));
 }
 
 /**
@@ -713,7 +713,7 @@ async function updateCTValues(csvRow, metas, allSampleCTs){
     }
 
     let sampleID = getSampleId(sampleObj);
-    updateMetas(sampleID, allSampleCTs[sampleBC]);
+    await updateMetas(sampleID, allSampleCTs[sampleBC]);
   }
 
   return Promise.resolve(true);
@@ -799,10 +799,10 @@ function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
     comment:"#", //ignore lines that begin with #
     skipLines:2 }
   )
-    .on('data', async (row) => {
+    .on('data', (row) => {
       // DO NOT CHANGE ORDER
       if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
-        hamiltonTracking(row, metas);
+        promises.push(hamiltonTracking(row, metas));
       } else if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC)){
         write = true;
         let p = getElabID(row).then((elabID) => {
@@ -814,10 +814,12 @@ function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
         promises.push(p);
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
         parser.pause();
-        await updateCTValues(row, metas, allSampleCTs);
-        parser.resume();
+        let p = updateCTValues(row, metas, allSampleCTs).then(() => {
+          parser.resume();
+        });
+        promises.push(p);
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
-        updateTestResult(row, metas, failedWells, qPCRUser, qPCRSerialNum);
+        promises.push(updateTestResult(row, metas, failedWells, qPCRUser, qPCRSerialNum));
       }
     })
     .on('error', (error) => {
@@ -825,17 +827,16 @@ function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
       process.exitCode = 8;
       parser.end();
     })
-    .on('end', async (rowCount) => {
-      logger.info(`Parsed ${rowCount} records`);
-
-      if (write) {
-        Promise.all(promises).then(() => {
+    .on('end', (rowCount) => {
+      Promise.all(promises).then(() => {
+        logger.info(`Parsed ${rowCount} records`);
+        if (write) {
           // overwrite the original logfile
           logger.info(`Writing eLab IDs to file`);
           csv.writeToPath(logfile, idRows);
           process.exitCode = 14;
-        });
-      }
+        }
+      });
     });
 }
 
