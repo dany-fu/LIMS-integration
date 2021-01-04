@@ -54,9 +54,16 @@ where Z is the offset from UTC
    - Only the Well Call file updates the Sample Process Status, qPCR User, and qPCR SN.
    - All samples named `PCR_POS`, `NEC_#`, `NTC_#` is assumed to be a control and skipped during processing 
    UNLESS there is a failure. In which case, the Control Fail Procedure will be followed, outlined below.  
-   
-* Existing eLab SampleType and custom fields should not be altered    
-   - Expected fields are defined in `constants.js`
+* Aliquot (Gandalf) prefetch file    
+   - We expect the input file to have 2 empty lines at the start of the file    
+   - Input file expected headers:     
+      - Sample Tube Barcode  
+   - The input file will be overwritten and will not contain empty lines at the start of the file    
+   - Output file headers:   
+      - Sample Tube Barcode    
+      - eLab Sample ID - either the IDs *or* error values: `NOT FOUND`, `DUPLICATE`, or `ERROR`    
+* Existing eLab SampleType and custom fields should not be altered     
+   - Expected fields are defined in `constants.js`    
 * **File contents and eLab fields are case and white-space sensitive**
    
 
@@ -95,9 +102,3 @@ Status is to be considered Finished.**
 ![qPCR_plate](https://user-images.githubusercontent.com/7750862/87336835-7b7a9080-c510-11ea-9b4e-a54849ea1426.png)
 
 Key: Plate 1 (Red), Plate 2 (Green), Plate 3 (Yellow), Plate 4 (Blue)
-
-### eLab ID Prefetch Procedure
-1) Powershell script checks `todo` folder every 30 seconds
-2) When a file is found, Powershell script will move file to `in-progress` and invoke this script with the file
-3) Script adds a new column `eLab Sample ID` with the IDs *or* error values: `NOT FOUND`, `DUPLICATE`, or `ERROR`
-4) Script moves file to `done` folder when writing is complete
