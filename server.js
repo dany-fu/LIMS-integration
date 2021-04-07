@@ -1,6 +1,6 @@
 // Author: Dany Fu (danyfu@bu.edu)
 
-const ax = require("axios").default;
+const ax = require("axios");
 const rateLimit = require("axios-rate-limit");
 const axios = rateLimit(ax.create(), { maxRequests: 5, perMilliseconds: 1000});
 const csv = require("fast-csv");
@@ -9,6 +9,7 @@ const argv = require("minimist")(process.argv.slice(2));
 const config = require("config");
 const path = require("path");
 const constants = require("./constants.js");
+const timeout = 5000; //ms
 
 /*****************
  * Logging
@@ -24,7 +25,7 @@ let todayFormatted = today.substring(0, 10).replace(/\//g, "-");
 const logger = createLogger({
   format: combine(
     timestamp({
-      format: 'M/D/YYYY, hh:mm:ss A Z'
+      format: 'MM/DD/YYYY, hh:mm:ss A Z'
     }),
     myFormat
   ),
@@ -128,14 +129,16 @@ function createMetaObj({key, value, type, metaID}={}){
  * @returns {Promise<void>}
  */
 async function updateMetas(sampleID, metaArray, retries=5){
+
   return axios
-    .put(`${config.get('endpoints.samples')}/${sampleID}/metas`, metaArray)
+    .put(`${config.get('endpoints.samples')}/${sampleID}/metas`, metaArray, {timeout: timeout})
     .then((res) => {
+
       if(res.status === 200){
         logger.info(`Batch update sample: ${sampleID}, statusCode: ${res.status}.`);
       } else {
         if(retries > 0){
-          logger.error(`Error occurred during metas update for sampleID ${sampleID}. Trying again.`);
+          logger.error(`Error occurred during metas update for sampleID ${sampleID}, statusCode: ${res.status}. Trying again.`);
           return updateMetas(sampleID, metaArray, retries - 1);
         } else {
           logger.error(`Failed to batch update sample after 5 attempts; Error: ${res.data}. 
@@ -150,7 +153,10 @@ async function updateMetas(sampleID, metaArray, retries=5){
         logger.error(`Error occurred during metas update for sampleID ${sampleID}. Trying again.`);
         return updateMetas(sampleID, metaArray, retries - 1);
       } else {
-        if(error.response){
+        if (ax.isCancel(error)) {
+          logger.error(`Request cancelled after 5 attempts, ${error}`);
+        }
+        else if(error.response){
           logger.error(`Failed to batch update sample after 5 attempts: ${sampleID}; Status: ${error.response.status}. 
                         StatusText: ${error.response.statusText}. Error Message: ${error.response.data}.
                         SAMPLE ID:${sampleID} NOT CORRECTLY PROCESSED.`);
@@ -173,11 +179,12 @@ async function updateMetas(sampleID, metaArray, retries=5){
  * @returns {Promise<void>} Sample object with all custom fields if found, else Null
  */
 async function getPatientSample(barcode, prefetch=false, retries=5){
+
   let endpoint = `${config.get('endpoints.samples')}` +
     `?$expand=meta&sampleTypeID=${config.get('covidSampleTypeId')}` +
     `&name=${barcode}`;
 
-  return axios.get(endpoint)
+  return axios.get(endpoint, {timeout: timeout})
     .then((res) => {
       if(res.status === 200){
         if(res.data.data.length === 0){
@@ -195,7 +202,7 @@ async function getPatientSample(barcode, prefetch=false, retries=5){
         }
       } else{
         if(retries > 0){
-          logger.error(`Error occurred during getting sample ${barcode}. Trying again.`);
+          logger.error(`Error occurred during getting sample ${barcode}, statusCode: ${res.status}. Trying again.`);
           return getPatientSample(barcode, prefetch, retries-1);
         } else {
           logger.error(res.data);
@@ -209,7 +216,10 @@ async function getPatientSample(barcode, prefetch=false, retries=5){
         logger.error(`Error occurred while getting sample ${barcode}. Trying again.`);
         return getPatientSample(barcode, prefetch, retries-1);
       } else {
-        if(error.response){
+        if (ax.isCancel(error)) {
+          logger.error(`Request cancelled after 5 attempts, ${error}`);
+        }
+        else if(error.response){
           logger.error(`Failed to get sample after 5 attempts. Status: ${error.response.status}. 
                       StatusText: ${error.response.statusText}. Error Message: ${error.response.data}.
                       SAMPLE BC:${barcode} NOT PROCESSED.`);
@@ -230,14 +240,15 @@ async function getPatientSample(barcode, prefetch=false, retries=5){
  * @returns {Promise<T>}
  */
 async function getCovidSampleTypeMetas(retries=5){
-  return axios.get(`${config.get('endpoints.sampleTypes')}/${config.get('covidSampleTypeId')}/meta`)
+
+  return axios.get(`${config.get('endpoints.sampleTypes')}/${config.get('covidSampleTypeId')}/meta`, {timeout: timeout})
     .then((res) => {
       if(res.status === 200){
         logger.info(`Got COVID-19 sampleType, statusCode: ${res.status}`);
         return res.data.data;
       } else {
         if(retries > 0){
-          logger.error("Error occurred while getting COVID-19 sampleType. Trying again");
+          logger.error(`Error occurred while getting COVID-19 sampleType, statusCode: ${res.status}. Trying again`);
           return getCovidSampleTypeMetas(retries-1);
         } else {
           logger.error(`Failed to get COVID-19 sampleType after 5 attempts. Status code: ${res.status}`);
@@ -251,7 +262,10 @@ async function getCovidSampleTypeMetas(retries=5){
         logger.error("Error occurred while getting COVID-19 sampleType. Trying again");
         return getCovidSampleTypeMetas(retries-1);
       } else {
-        if(error.response){
+        if (ax.isCancel(error)) {
+          logger.error(`Request cancelled after 5 attempts, ${error}`);
+        }
+        else if(error.response){
           logger.error(`Failed to find COVID-19 sample type after 5 attempts. Status: ${error.response.status}. 
                         StatusText: ${error.response.statusText}. Error Message: ${error.response.data}.`);
         } else {
