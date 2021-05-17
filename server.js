@@ -62,6 +62,10 @@ function getNumAttempts(patientSample){
   return patientSample.data[0].meta.find(m => m.key === constants.META.NUM_ATTEMPTS).value;
 }
 
+function getPerformed(patientSample){
+  return patientSample.data[0].meta.find(m => m.key === constants.META.PERFORMED).value;
+}
+
 function getSampleID(patientSample){
   return patientSample.data[0].sampleID;
 }
@@ -536,6 +540,16 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
     process.exitCode = 8;
     return;
   }
+
+  if (sampleTypeID === config.get('covidSampleTypeID')){
+    if (getPerformed(sampleObj) === constants.POOLED.POOLED){
+      logger.error(`SAMPLE BC:${sampleBC} is a COVID-19 Sample and performed as "pooled" and thus should not appear in the 
+                  log. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+      process.exitCode = 8;
+      return;
+    }
+  }
+
 
   let metas = sampleTypeID === config.get('covidSampleTypeID')? indMetas : poolMetas;
   let metaArray = []; //so we can update all the fields from the csv row in one API call

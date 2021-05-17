@@ -20,7 +20,8 @@ const META = {
   SAMPLE_PREP_SN: "Sample Aliquot Instrument SN",
   EXTRACTION_SN: "RNA Extraction Instrument SN",
   QPCR_PREP_SN: "qPCR Prep Instrument SN",
-  QPCR_SN: "qPCR SN"
+  QPCR_SN: "qPCR SN",
+  PERFORMED: "Performed"
 };
 
 const STATUS_VAL = {
@@ -34,7 +35,7 @@ const STATUS_VAL = {
 
 // key is from the "Call" column of the QuantStudio csv
 // value is the string that it's mapped to on eLab
-const TEST_RESULT ={
+const TEST_RESULT = {
   POSITIVE: "Positive",
   NEGATIVE: "Negative",
   INCONCLUSIVE: "Inconclusive - recollect",
@@ -84,6 +85,12 @@ const PLATE384 = {
 
 const MAX_ATTEMPTS = 5;
 
+//constants that are unique to pooled testing
+const POOLED = {
+  INDIVIDUAL: "Individual",
+  POOLED:  "Pooled"
+};
+
 module.exports = {
   HAMILTON_LOG_HEADERS: HAMILTON_LOG_HEADERS,
   QPCR_LOG_HEADERS: QPCR_LOG_HEADERS,
@@ -94,5 +101,6 @@ module.exports = {
   CONTROLS: CONTROLS,
   CONTROL_WELLS: CONTROL_WELLS,
   PLATE384: PLATE384,
-  MAX_ATTEMPTS: MAX_ATTEMPTS
+  MAX_ATTEMPTS: MAX_ATTEMPTS,
+  POOLED: POOLED
 };
