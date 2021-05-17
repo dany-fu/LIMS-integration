@@ -62,8 +62,12 @@ function getNumAttempts(patientSample){
   return patientSample.data[0].meta.find(m => m.key === constants.META.NUM_ATTEMPTS).value;
 }
 
-function getSampleId(patientSample){
+function getSampleID(patientSample){
   return patientSample.data[0].sampleID;
+}
+
+function getSampleTypeID(patientSample){
+  return patientSample.data[0].sampleTypeID;
 }
 
 function stringToArray(str){
@@ -171,7 +175,7 @@ async function updateMetas(sampleID, metaArray, retries=5){
 }
 
 /**
- * Find a Covid-19 Sample with the given barcode (which is also its name)
+ * Find a sample with the given barcode (which is also its name)
  * Returns null if more than one sample can be found with the same barcode
  * @param barcode Name of the sample
  * @param prefetch Boolean, returns error codes for Hamilton if true
@@ -181,8 +185,7 @@ async function updateMetas(sampleID, metaArray, retries=5){
 async function getPatientSample(barcode, prefetch=false, retries=5){
 
   let endpoint = `${config.get('endpoints.samples')}` +
-    `?$expand=meta&sampleTypeID=${config.get('covidSampleTypeId')}` +
-    `&name=${barcode}`;
+    `?$expand=meta&name=${barcode}`;
 
   return axios.get(endpoint, {timeout: timeout})
     .then((res) => {
@@ -234,24 +237,24 @@ async function getPatientSample(barcode, prefetch=false, retries=5){
 }
 
 /**
- * Get all the meta fields for COVID-19 SampleType
- * The sampleTypeId is pulled from config
+ * Get all the meta fields for SampleType
+ * @param sampleTypeID either COVID-19 Sample or Pooled COVID-19 Sample, see config for IDs
  * @param retries Retry API call up to 5 (default) times
  * @returns {Promise<T>}
  */
-async function getCovidSampleTypeMetas(retries=5){
+async function getSampleTypeMetas(sampleTypeID, retries=5){
 
-  return axios.get(`${config.get('endpoints.sampleTypes')}/${config.get('covidSampleTypeId')}/meta`, {timeout: timeout})
+  return axios.get(`${config.get('endpoints.sampleTypes')}/${sampleTypeID}/meta`, {timeout: timeout})
     .then((res) => {
       if(res.status === 200){
-        logger.info(`Got COVID-19 sampleType, statusCode: ${res.status}`);
+        logger.info(`Got SampleType, statusCode: ${res.status}`);
         return res.data.data;
       } else {
         if(retries > 0){
-          logger.error(`Error occurred while getting COVID-19 sampleType, statusCode: ${res.status}. Trying again`);
-          return getCovidSampleTypeMetas(retries-1);
+          logger.error(`Error occurred while getting SampleType, statusCode: ${res.status}. Trying again`);
+          return getSampleTypeMetas(retries-1);
         } else {
-          logger.error(`Failed to get COVID-19 sampleType after 5 attempts. Status code: ${res.status}`);
+          logger.error(`Failed to get SampleType after 5 attempts. Status code: ${res.status}`);
           process.exitCode = 8;
           return null;
         }
@@ -259,17 +262,17 @@ async function getCovidSampleTypeMetas(retries=5){
     })
     .catch((error) => {
       if(retries > 0){
-        logger.error("Error occurred while getting COVID-19 sampleType. Trying again");
-        return getCovidSampleTypeMetas(retries-1);
+        logger.error("Error occurred while getting SampleType. Trying again");
+        return getSampleTypeMetas(retries-1);
       } else {
         if (ax.isCancel(error)) {
-          logger.error(`Request cancelled after 5 attempts, ${error}`);
+          logger.error(`Request to fetch SampleType cancelled after 5 attempts, ${error}`);
         }
         else if(error.response){
-          logger.error(`Failed to find COVID-19 sample type after 5 attempts. Status: ${error.response.status}. 
+          logger.error(`Failed to find SampleType after 5 attempts. Status: ${error.response.status}. 
                         StatusText: ${error.response.statusText}. Error Message: ${error.response.data}.`);
         } else {
-          logger.error(`Failed to get COVID-19 sample type after 5 attempts. Possible internal network error. Try again later.`);
+          logger.error(`Failed to get SampleType after 5 attempts. Possible internal network error. Try again later.`);
           logger.error(`Error dump: ${error}`);
         }
         process.exitCode = 8;
@@ -503,10 +506,11 @@ function lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, s
  * Get data from each row of the Hamilton log and calls the appropriate function
  * to update eLabs records
  * @param csvRow
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param indMetas Array of meta fields associated with the COVID-19 SampleType
+ * @param poolMetas Array of meta fields associated with the Pooled COVID-19 SampleType
  * @returns {Promise<void>}
  */
-async function hamiltonTracking(csvRow, metas){
+async function hamiltonTracking(csvRow, indMetas, poolMetas){
   let sampleBC = csvRow[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC];
 
   let protocol = csvRow[constants.HAMILTON_LOG_HEADERS.PROTOCOL];
@@ -519,23 +523,25 @@ async function hamiltonTracking(csvRow, metas){
     return;
   }
 
-  let sampleID = csvRow[constants.HAMILTON_LOG_HEADERS.ELAB_ID];
-  // fetch from eLab if not found in Hamilton log
-  if(isEmpty(sampleID)){
-    logger.info(`SampleID for barcode ${sampleBC} not found in Hamilton log. Fetching again.`);
-    let sampleObj = await getPatientSample(sampleBC);
-    if(!sampleObj){
-      process.exitCode = 8;
-      return;
-    }
-    sampleID = getSampleId(sampleObj);
+  let sampleObj = await getPatientSample(sampleBC);
+  if(!sampleObj){
+    process.exitCode = 8;
+    return;
   }
 
+  let sampleID = getSampleID(sampleObj);
+  let sampleTypeID = getSampleTypeID(sampleObj);
+  if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
+    logger.error(`Unrecognized SampleTypeID ${sampleTypeID}. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+    process.exitCode = 8;
+    return;
+  }
+
+  let metas = sampleTypeID === config.get('covidSampleTypeID')? indMetas : poolMetas;
   let metaArray = []; //so we can update all the fields from the csv row in one API call
   let reagentNames = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NAMES];
   let reagentNums = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NUMS];
   metaArray.push(...reagentTracking(sampleID, metas, reagentNames, reagentNums));
-
 
   let destBC = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_BC];
   let destWellNum = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_WELL_NUM];
@@ -643,13 +649,14 @@ function updatePassed(sampleObj, metas, call){
  * WARNING occurs when controls failed, and can be reattempted up to 4 more times
  * If controls fail during attempt #5, a recollection is required
  * @param csvRow
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param indMetas Array of meta fields associated with the COVID-19 SampleType
+ * @param poolMetas Array of meta fields associated with the Pooled COVID-19 SampleType
  * @param failedWells Dictionary of all possible failed wells and their respective status
  * @param user Initials of the technician who initiated the qPCR run
  * @param serialNum Serial number of the qPCR machine
  * @returns {Promise<void>}
  */
-async function updateTestResult(csvRow, metas, failedWells, user, serialNum){
+async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, serialNum){
   let sampleBC = csvRow[constants.QPCR_LOG_HEADERS.SAMPLE];
   if (isControl(sampleBC)) {
     return;
@@ -661,8 +668,16 @@ async function updateTestResult(csvRow, metas, failedWells, user, serialNum){
     return;
   }
 
-  let sampleID = getSampleId(sampleObj);
+  let sampleID = getSampleID(sampleObj);
+  let sampleTypeID = getSampleTypeID(sampleObj);
+  if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
+    logger.error(`Unrecognized SampleTypeID ${sampleTypeID}. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+    process.exitCode = 8;
+    return;
+  }
+
   let metaArray = [];
+  let metas = sampleTypeID === config.get('covidSampleTypeID')? indMetas : poolMetas;
   const userMeta = metas.find(meta => meta.key === constants.META.QPCR_TECH);
   metaArray.push(createMetaObj({
     key: constants.META.QPCR_TECH,
@@ -697,13 +712,28 @@ async function updateTestResult(csvRow, metas, failedWells, user, serialNum){
  * Updates PatientSample with CT values from the QuantStudio. Stores CT values
  * internally until all 3 have been read, then writes them at once to eLab.
  * @param csvRow
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param indMetas Array of meta fields associated with the COVID-19 SampleType
+ * @param poolMetas Array of meta fields associated with the Pooled COVID-19 SampleType
  * @param allSampleCTs dictionary of eLab sampleID to array of CT value meta objects
  * @returns {Promise<void>}
  */
-async function updateCTValues(csvRow, metas, allSampleCTs){
+async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
   let sampleBC = csvRow[constants.QPCR_LOG_HEADERS.SAMPLE];
   if (isControl(sampleBC)) {
+    return;
+  }
+
+  let sampleObj = await getPatientSample(sampleBC);
+  if(!sampleObj){
+    process.exitCode = 8;
+    return;
+  }
+
+  let sampleID = getSampleID(sampleObj);
+  let sampleTypeID = getSampleTypeID(sampleObj);
+  if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
+    logger.error(`Unrecognized SampleTypeID ${sampleTypeID}. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+    process.exitCode = 8;
     return;
   }
 
@@ -713,20 +743,15 @@ async function updateCTValues(csvRow, metas, allSampleCTs){
 
   let target = csvRow[constants.QPCR_LOG_HEADERS.TARGET];
   let cq = csvRow[constants.QPCR_LOG_HEADERS.CQ];
+  let metas = sampleTypeID === config.get('covidSampleTypeID')? indMetas : poolMetas;
   const targetMeta = metas.find(m => m.key === constants.META[target]);
   allSampleCTs[sampleBC].push(createMetaObj({key: constants.META[target],
     value: cq,
     type: targetMeta.sampleDataType,
     metaID: targetMeta.sampleTypeMetaID}));
 
+  // update record when all 3 records are processed
   if(allSampleCTs[sampleBC].length === 3){
-    let sampleObj = await getPatientSample(sampleBC);
-    if(!sampleObj){
-      process.exitCode = 8;
-      return;
-    }
-
-    let sampleID = getSampleId(sampleObj);
     await updateMetas(sampleID, allSampleCTs[sampleBC]);
   }
 
@@ -789,7 +814,7 @@ async function getElabID(csvRow){
   if (typeof sampleObj === 'string'){
     sampleID = sampleObj;
   } else {
-    sampleID = getSampleId(sampleObj)
+    sampleID = getSampleID(sampleObj)
   }
 
   return Promise.resolve(sampleID);
@@ -798,16 +823,31 @@ async function getElabID(csvRow){
 /**
  * Handles parsing of all Hamilton and QuantStudio CSV output
  * @param logfile Output from Hamilton or QuantStudio
- * @param metas Array of meta fields associated with the COVID-19 SampleType
  * @param failedWells Dictionary of all possible failed wells and their respective status
  * @param qPCRUser Required for Well Call file
  * @param qPCRSerialNum Required for Well Call file
  */
-function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
+async function parseCSV(logfile, failedWells, qPCRUser, qPCRSerialNum){
   let allSampleCTs = {};
   let write = false;
   let promises = [];
   let idRows = [[constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC, constants.HAMILTON_LOG_HEADERS.ELAB_ID]];
+
+  let indMetas = await getSampleTypeMetas(config.get('covidSampleTypeID'));
+  if (!indMetas){
+    logger.error(`Error occurred when getting COVID-19 SampleType. NO SAMPLE IN LOGFILE:${logfile} WAS PROCESSED.`);
+    process.exitCode = 8;
+    return;
+  }
+
+  let poolMetas = await getSampleTypeMetas(config.get('pooledSampleTypeID'));
+  if (!poolMetas){
+    logger.error(`Error occurred when getting Pooled SampleType. NO SAMPLE IN LOGFILE:${logfile} WAS PROCESSED.`);
+    process.exitCode = 8;
+    return;
+  }
+
+
   let parser = csv.parseFile(logfile, {
     headers:true,
     comment:"#", //ignore lines that begin with #
@@ -816,7 +856,7 @@ function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
     .on('data', (row) => {
       // DO NOT CHANGE ORDER
       if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.PROTOCOL)){
-        promises.push(hamiltonTracking(row, metas));
+        promises.push(hamiltonTracking(row, indMetas, poolMetas));
       } else if (Object.keys(row).includes(constants.HAMILTON_LOG_HEADERS.SAMPLE_TUBE_BC)){
         write = true;
         let p = getElabID(row).then((elabID) => {
@@ -828,12 +868,12 @@ function parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum){
         promises.push(p);
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CQ)){
         parser.pause();
-        let p = updateCTValues(row, metas, allSampleCTs).then(() => {
+        let p = updateCTValues(row, indMetas, poolMetas, allSampleCTs).then(() => {
           parser.resume();
         });
         promises.push(p);
       } else if (Object.keys(row).includes(constants.QPCR_LOG_HEADERS.CALL)){
-        promises.push(updateTestResult(row, metas, failedWells, qPCRUser, qPCRSerialNum));
+        promises.push(updateTestResult(row, indMetas, poolMetas, failedWells, qPCRUser, qPCRSerialNum));
       }
     })
     .on('error', (error) => {
@@ -865,13 +905,6 @@ async function main(logfile){
     return;
   }
   axios.defaults.headers.common['Authorization'] = token;
-
-  let metas = await getCovidSampleTypeMetas();
-  if (!metas){
-    logger.error(`Error occurred when getting SampleType. NO SAMPLE IN LOGFILE:${logfile} WAS PROCESSED.`);
-    process.exitCode = 8;
-    return;
-  }
 
   let fileData = fs.readFileSync(logfile, 'utf8');
   let failedWells = {};
@@ -910,7 +943,7 @@ async function main(logfile){
     }
   }
 
-  parseCSV(logfile, metas, failedWells, qPCRUser, qPCRSerialNum);
+  parseCSV(logfile, failedWells, qPCRUser, qPCRSerialNum);
 }
 
 /**

@@ -1,6 +1,7 @@
 {
   "authToken": "",
-  "covidSampleTypeId": 33369,
+  "covidSampleTypeID": 33369,
+  "pooledSampleTypeID": 34575,
   "endpoints": {
     "createSample": "https://bu-acc.elabjournal.com/api/v1/samples?autoCreateMetaDefaults=true",
     "sampleTypes": "https://bu-acc.elabjournal.com/api/v1/sampleTypes",
