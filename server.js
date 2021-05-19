@@ -124,6 +124,26 @@ function createMetaObj({key, value, type, metaID}={}){
   }
 }
 
+function getMetasForSampleType(sampleObj, sampleBC, indMetas, poolMetas){
+  let sampleTypeID = getSampleTypeID(sampleObj);
+
+  if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
+    logger.error(`Unrecognized SampleTypeID ${sampleTypeID}. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+    return;
+  }
+
+  if (sampleTypeID === config.get('covidSampleTypeID')){
+    if (getPerformed(sampleObj) === constants.POOLED.POOLED){
+      logger.error(`SAMPLE BC:${sampleBC} is a COVID-19 Sample and performed as "pooled" and thus should not appear in the 
+                  log. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+      process.exitCode = 8;
+      return;
+    }
+  }
+
+  return sampleTypeID === config.get('covidSampleTypeID')? indMetas : poolMetas;
+}
+
 
 /******************
  * ELAB API CALLS
@@ -534,24 +554,12 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
   }
 
   let sampleID = getSampleID(sampleObj);
-  let sampleTypeID = getSampleTypeID(sampleObj);
-  if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
-    logger.error(`Unrecognized SampleTypeID ${sampleTypeID}. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+  let metas = getMetasForSampleType(sampleObj, sampleBC, indMetas, poolMetas);
+  if(!metas){
     process.exitCode = 8;
     return;
   }
 
-  if (sampleTypeID === config.get('covidSampleTypeID')){
-    if (getPerformed(sampleObj) === constants.POOLED.POOLED){
-      logger.error(`SAMPLE BC:${sampleBC} is a COVID-19 Sample and performed as "pooled" and thus should not appear in the 
-                  log. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
-      process.exitCode = 8;
-      return;
-    }
-  }
-
-
-  let metas = sampleTypeID === config.get('covidSampleTypeID')? indMetas : poolMetas;
   let metaArray = []; //so we can update all the fields from the csv row in one API call
   let reagentNames = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NAMES];
   let reagentNums = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NUMS];
@@ -683,15 +691,13 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
   }
 
   let sampleID = getSampleID(sampleObj);
-  let sampleTypeID = getSampleTypeID(sampleObj);
-  if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
-    logger.error(`Unrecognized SampleTypeID ${sampleTypeID}. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+  let metas = getMetasForSampleType(sampleObj, sampleBC, indMetas, poolMetas);
+  if(!metas){
     process.exitCode = 8;
     return;
   }
 
   let metaArray = [];
-  let metas = sampleTypeID === config.get('covidSampleTypeID')? indMetas : poolMetas;
   const userMeta = metas.find(meta => meta.key === constants.META.QPCR_TECH);
   metaArray.push(createMetaObj({
     key: constants.META.QPCR_TECH,
@@ -744,9 +750,8 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
   }
 
   let sampleID = getSampleID(sampleObj);
-  let sampleTypeID = getSampleTypeID(sampleObj);
-  if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
-    logger.error(`Unrecognized SampleTypeID ${sampleTypeID}. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+  let metas = getMetasForSampleType(sampleObj, sampleBC, indMetas, poolMetas);
+  if(!metas){
     process.exitCode = 8;
     return;
   }
@@ -757,7 +762,6 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
 
   let target = csvRow[constants.QPCR_LOG_HEADERS.TARGET];
   let cq = csvRow[constants.QPCR_LOG_HEADERS.CQ];
-  let metas = sampleTypeID === config.get('covidSampleTypeID')? indMetas : poolMetas;
   const targetMeta = metas.find(m => m.key === constants.META[target]);
   allSampleCTs[sampleBC].push(createMetaObj({key: constants.META[target],
     value: cq,
