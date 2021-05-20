@@ -74,6 +74,15 @@ function getSampleTypeID(patientSample){
   return patientSample.data[0].sampleTypeID;
 }
 
+function getChildrenIDs(pooledSample){
+  // check that all children are of COVID-19 sampleType
+  const nonCOVID = pooledSample.data[0].children.some(child => child.sampleTypeID !== config.get('covidSampleTypeID'));
+  if(nonCOVID){
+    return null;
+  }
+  return pooledSample.data[0].children.map(obj => obj.sampleID);
+}
+
 function stringToArray(str){
   str = str.replace(/'|"/g, "");
   return str.replace(/^\[|\]$/g, "").split(",");
@@ -215,7 +224,7 @@ async function updateMetas(sampleID, metaArray, retries=5){
 async function getPatientSample(barcode, prefetch=false, retries=5){
 
   let endpoint = `${config.get('endpoints.samples')}` +
-    `?$expand=meta&name=${barcode}`;
+    `?$expand=meta%2Cchildren&name=${barcode}`;
 
   return axios.get(endpoint, {timeout: timeout})
     .then((res) => {
@@ -577,7 +586,24 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
   let serialNum = csvRow[constants.HAMILTON_LOG_HEADERS.SERIAL_NUM];
   metaArray.push(...lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, serialNum));
 
-  return Promise.resolve(await updateMetas(sampleID, metaArray));
+  // if qPCR prep && sampleType is pooled, then update all children
+  if(protocol === constants.ORIGIN_VAL.QPCR_PREP && getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
+    let children = getChildrenIDs(sampleObj);
+    if(!children){
+      logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
+                    Results for sampleBC ${sampleBC} NOT processed.`);
+      process.exitCode = 8;
+      return;
+    }
+    for(const childID of children){
+      let childMetaArr = [];
+      childMetaArr.push(...reagentTracking(childID, indMetas, reagentNames, reagentNums));
+      childMetaArr.push(...lineageTracking(childID, metas, protocol, destBC, destWellNum, user, serialNum));
+      await updateMetas(childID, childMetaArr);
+    }
+  }
+
+  return Promise.resolve(updateMetas(sampleID, metaArray));
 }
 
 
@@ -670,6 +696,46 @@ function updatePassed(sampleObj, metas, call){
 }
 
 /**
+ * Helper function for building metas for test results
+ * @param metas Array of meta fields associated with a SampleType
+ * @param sampleObj data object of the sample from eLab
+ * @param failedWells Dictionary of all possible failed wells and their respective status
+ * @param user Initials of the technician who initiated the qPCR run
+ * @param serialNum Serial number of the qPCR machine
+ * @param wellNum Well number from the Well Position column of the qPCR output
+ * @param call Result of the well from the Call column of the qPCR output
+ * @returns {Array}
+ */
+function buildResultMetas(metas, sampleObj, failedWells, user, serialNum, wellNum, call){
+  let metaArray = [];
+  const userMeta = metas.find(meta => meta.key === constants.META.QPCR_TECH);
+  metaArray.push(createMetaObj({
+    key: constants.META.QPCR_TECH,
+    value: user,
+    type: userMeta.sampleDataType,
+    metaID: userMeta.sampleTypeMetaID})); //update initials of "qPCR User"
+
+  const snNumMeta = metas.find(meta => meta.key === constants.META.QPCR_SN);
+  metaArray.push(createMetaObj({
+    key: constants.META.QPCR_SN,
+    value: serialNum,
+    type: snNumMeta.sampleDataType,
+    metaID: snNumMeta.sampleTypeMetaID})); //update "qPCR SN"
+
+  let numAttemptMetaObj = increaseAttempt(sampleObj, metas);
+  metaArray.push(numAttemptMetaObj);
+
+
+  if (wellNum in failedWells){
+    metaArray.push(...updateFailed(sampleObj, metas, failedWells[wellNum], numAttemptMetaObj.value));
+  } else {
+    metaArray.push(...updatePassed(sampleObj, metas, call));
+  }
+
+  return metaArray;
+}
+
+/**
  * Main function for updating data from the Well Call file
  *
  * Update "call" of the test, results can be POSITIVE, NEGATIVE, INVALID, INCONCLUSIVE, or WARNING
@@ -703,33 +769,41 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
     return;
   }
 
-  let metaArray = [];
-  const userMeta = metas.find(meta => meta.key === constants.META.QPCR_TECH);
-  metaArray.push(createMetaObj({
-    key: constants.META.QPCR_TECH,
-    value: user,
-    type: userMeta.sampleDataType,
-    metaID: userMeta.sampleTypeMetaID})); //update initials of "qPCR User"
-
-  const snNumMeta = metas.find(meta => meta.key === constants.META.QPCR_SN);
-  metaArray.push(createMetaObj({
-    key: constants.META.QPCR_SN,
-    value: serialNum,
-    type: snNumMeta.sampleDataType,
-    metaID: snNumMeta.sampleTypeMetaID})); //update "qPCR SN"
-
-  let numAttemptMetaObj = increaseAttempt(sampleObj, metas);
-  metaArray.push(numAttemptMetaObj);
-
   let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
-  if (wellNum in failedWells){
-    metaArray.push(...updateFailed(sampleObj, metas, failedWells[wellNum], numAttemptMetaObj.value));
-  } else {
-    let call = csvRow[constants.QPCR_LOG_HEADERS.CALL];
-    metaArray.push(...updatePassed(sampleObj, metas, call));
+  let call = csvRow[constants.QPCR_LOG_HEADERS.CALL];
+  let metaArray = buildResultMetas(metas, sampleObj, failedWells, user, serialNum, wellNum, call);
+
+  // update its children, if pooled
+  if(getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
+    let children = getChildrenIDs(sampleObj);
+    if(!children){
+      logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
+                    Results for sampleBC ${sampleBC} NOT processed.`);
+      process.exitCode = 8;
+      return;
+    }
+    for(const childID of children){
+      let childMetaArr = buildResultMetas(indMetas, sampleObj, failedWells, user, serialNum, wellNum, call);
+      await updateMetas(childID, childMetaArr);
+    }
   }
 
   return Promise.resolve(await updateMetas(sampleID, metaArray));
+}
+
+/**
+ * Helper function for building metas for Cq targets
+ * @param metas
+ * @param target Name of the gene target
+ * @param cq  CT value
+ * @returns {{key, value, sampleDataType, sampleTypeMetaID}}
+ */
+function buildTargetMeta(metas, target, cq){
+  const targetMeta = metas.find(m => m.key === constants.META[target]);
+  return createMetaObj({key: constants.META[target],
+    value: cq,
+    type: targetMeta.sampleDataType,
+    metaID: targetMeta.sampleTypeMetaID});
 }
 
 /**
@@ -768,15 +842,28 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
 
   let target = csvRow[constants.QPCR_LOG_HEADERS.TARGET];
   let cq = csvRow[constants.QPCR_LOG_HEADERS.CQ];
-  const targetMeta = metas.find(m => m.key === constants.META[target]);
-  allSampleCTs[sampleBC].push(createMetaObj({key: constants.META[target],
-    value: cq,
-    type: targetMeta.sampleDataType,
-    metaID: targetMeta.sampleTypeMetaID}));
+  allSampleCTs[sampleBC].push(buildTargetMeta(metas, target, cq));
 
   // update record when all 3 records are processed
   if(allSampleCTs[sampleBC].length === 3){
     await updateMetas(sampleID, allSampleCTs[sampleBC]);
+
+    // and update its children, if pooled
+    if(getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
+      let children = getChildrenIDs(sampleObj);
+      if(!children){
+        logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
+                    Results for sampleBC ${sampleBC} NOT processed.`);
+        process.exitCode = 8;
+        return;
+      }
+      for(const childID of children){
+        let childMetaArr = allSampleCTs[sampleBC].map(parentMeta =>
+          buildTargetMeta(indMetas, parentMeta["key"].substring(10, 12), parentMeta["value"])
+        );
+        await updateMetas(childID, childMetaArr);
+      }
+    }
   }
 
   return Promise.resolve(true);
