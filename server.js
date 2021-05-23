@@ -59,7 +59,11 @@ function isEven(num) {
 }
 
 function getNumAttempts(patientSample){
-  return patientSample.data[0].meta.find(m => m.key === constants.META.NUM_ATTEMPTS).value;
+  if(patientSample.data){
+    return patientSample.data[0].meta.find(m => m.key === constants.META.NUM_ATTEMPTS).value;
+  } else {
+    return patientSample.meta.find(m => m.key === constants.META.NUM_ATTEMPTS).value;
+  }
 }
 
 function getPerformed(patientSample){
@@ -71,16 +75,21 @@ function getSampleID(patientSample){
 }
 
 function getSampleTypeID(patientSample){
-  return patientSample.data[0].sampleTypeID;
+  if(patientSample.data){
+    return patientSample.data[0].sampleTypeID;
+  } else {
+    return patientSample.sampleTypeID;
+  }
+
 }
 
-function getChildrenIDs(pooledSample){
+function getChildren(pooledSample){
   // check that all children are of COVID-19 sampleType
   const nonCOVID = pooledSample.data[0].children.some(child => child.sampleTypeID !== config.get('covidSampleTypeID'));
   if(nonCOVID){
     return null;
   }
-  return pooledSample.data[0].children.map(obj => obj.sampleID);
+  return pooledSample.data[0].children;
 }
 
 function stringToArray(str){
@@ -588,15 +597,16 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
 
   // if qPCR prep && sampleType is pooled, then update all children
   if(protocol === constants.ORIGIN_VAL.QPCR_PREP && getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
-    let children = getChildrenIDs(sampleObj);
+    let children = getChildren(sampleObj);
     if(!children){
       logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
                     Results for sampleBC ${sampleBC} NOT processed.`);
       process.exitCode = 8;
       return;
     }
-    for(const childID of children){
+    for(const child of children){
       let childMetaArr = [];
+      const childID = child.sampleID;
       childMetaArr.push(...reagentTracking(childID, indMetas, reagentNames, reagentNums));
       childMetaArr.push(...lineageTracking(childID, metas, protocol, destBC, destWellNum, user, serialNum));
       await updateMetas(childID, childMetaArr);
@@ -661,10 +671,18 @@ function updateFailed(sampleObj, metas, statusConst, numAttempt){
       type: result.sampleDataType,
       metaID: result.sampleTypeMetaID})); //Update Test Result to "Invalid - recollect"
 
-    metaArray.push(createMetaObj({key: constants.META.STATUS,
-      value: constants.STATUS_VAL.QPCR_DONE,
-      type: status.sampleDataType,
-      metaID: status.sampleTypeMetaID})); //update status to "Finished"
+    const sampleTypeID = getSampleTypeID(sampleObj);
+    if( sampleTypeID === config.get("covidSampleTypeID")){
+      metaArray.push(createMetaObj({key: constants.META.STATUS,
+        value: constants.STATUS_VAL.QPCR_DONE,
+        type: status.sampleDataType,
+        metaID: status.sampleTypeMetaID})); //update status to "Finished"
+    } else if (sampleTypeID === config.get("pooledSampleTypeID")){
+      metaArray.push(createMetaObj({key: constants.META.STATUS,
+        value: constants.STATUS_VAL.QPCR_COMPLETE,
+        type: status.sampleDataType,
+        metaID: status.sampleTypeMetaID})); //update status to "qPCR Completed"
+    }
   }
 
   return metaArray;
@@ -686,11 +704,20 @@ function updatePassed(sampleObj, metas, call){
     type: result.sampleDataType,
     metaID: result.sampleTypeMetaID})); //update COVID-19 Test Result
 
+  const sampleTypeID = getSampleTypeID(sampleObj);
   const status = metas.find(m => m.key === constants.META.STATUS);
-  metaArray.push(createMetaObj({key: constants.META.STATUS,
-    value: constants.STATUS_VAL.QPCR_DONE,
-    type: status.sampleDataType,
-    metaID: status.sampleTypeMetaID})); //update status to "Finished"
+  if( sampleTypeID === config.get("covidSampleTypeID")){
+    console.log("child here");
+    metaArray.push(createMetaObj({key: constants.META.STATUS,
+      value: constants.STATUS_VAL.QPCR_DONE,
+      type: status.sampleDataType,
+      metaID: status.sampleTypeMetaID})); //update status to "Finished"
+  } else if (sampleTypeID === config.get("pooledSampleTypeID")){
+    metaArray.push(createMetaObj({key: constants.META.STATUS,
+      value: constants.STATUS_VAL.QPCR_COMPLETE,
+      type: status.sampleDataType,
+      metaID: status.sampleTypeMetaID})); //update status to "qPCR Completed"
+  }
 
   return metaArray;
 }
@@ -775,15 +802,16 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
 
   // update its children, if pooled
   if(getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
-    let children = getChildrenIDs(sampleObj);
+    let children = getChildren(sampleObj);
     if(!children){
       logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
                     Results for sampleBC ${sampleBC} NOT processed.`);
       process.exitCode = 8;
       return;
     }
-    for(const childID of children){
-      let childMetaArr = buildResultMetas(indMetas, sampleObj, failedWells, user, serialNum, wellNum, call);
+    for(const child of children){
+      const childID = child.sampleID;
+      let childMetaArr = buildResultMetas(indMetas, child, failedWells, user, serialNum, wellNum, call);
       await updateMetas(childID, childMetaArr);
     }
   }
@@ -850,14 +878,15 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
 
     // and update its children, if pooled
     if(getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
-      let children = getChildrenIDs(sampleObj);
+      let children = getChildren(sampleObj);
       if(!children){
         logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
                     Results for sampleBC ${sampleBC} NOT processed.`);
         process.exitCode = 8;
         return;
       }
-      for(const childID of children){
+      for(const child of children){
+        const childID = child.sampleID;
         let childMetaArr = allSampleCTs[sampleBC].map(parentMeta =>
           buildTargetMeta(indMetas, parentMeta["key"].substring(10, 12), parentMeta["value"])
         );

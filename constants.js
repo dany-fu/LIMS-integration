@@ -29,6 +29,7 @@ const STATUS_VAL = {
   RNA_DONE: "RNA Extracted",
   QPCR_PREP_DONE: "qPCR Plate Prepared",
   QPCR_DONE: "Finished",
+  QPCR_COMPLETE: "qPCR Completed",
   RE_EXTRACT: "Re-run RNA Extraction",
   RE_QPCR: "Re-run qPCR"
 };
