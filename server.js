@@ -142,7 +142,7 @@ function createMetaObj({key, value, type, metaID}={}){
   }
 }
 
-function getMetasForSampleType(sampleObj, sampleBC, indMetas, poolMetas){
+function getMetasForSample(sampleObj, sampleBC, indMetas, poolMetas){
   let sampleTypeID = getSampleTypeID(sampleObj);
 
   if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
@@ -338,15 +338,14 @@ async function getSampleTypeMetas(sampleTypeID, retries=5){
 /**
  * Update Covid-19 Sample with the plate barcode and well number
  * from the Sample Prep Hamilton and update status
- * @param sampleID Unique ID of the sample in eLabs
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param metas Array of meta fields associated with a SampleType
  * @param destBC Output plate barcode
  * @param destWellNum Output well number
  * @param user Technician initials
  * @param serialNum Serial number of the Hamilton robot
  * @returns {*} Array of meta objects to be updated
  */
-function samplePrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
+function samplePrepTracking(metas, destBC, destWellNum, user, serialNum){
   let metaArray = [];
 
   const dwBC = metas.find(m => m.key === constants.META.DEEPWELL_BC);
@@ -390,15 +389,14 @@ function samplePrepTracking(sampleID, metas, destBC, destWellNum, user, serialNu
 /**
  * Updates Covid-19 Sample with the plate barcode and well number
  * from the RNA Extraction Hamilton and update status
- * @param sampleID Unique ID of the sample in eLabs
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param metas Array of meta fields associated with a SampleType
  * @param destBC Output plate barcode
  * @param destWellNum Output well number
  * @param user Technician initials
  * @param serialNum Serial number of the Hamilton robot
  * @returns {*} Array of meta objects to be updated
  */
-function rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
+function rnaExtractionTracking(metas, destBC, destWellNum, user, serialNum){
   let metaArray = [];
 
   const rnaBC = metas.find(m => m.key === constants.META.RNA_PLATE_BC);
@@ -442,15 +440,14 @@ function rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user, seria
 /**
  * Updates Covid-19 Sample with the plate barcode and well number
  * from the qPCR Prep Hamilton and update status
- * @param sampleID Unique ID of the sample in eLabs
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param metas Array of meta fields associated with a SampleType
  * @param destBC Output plate barcode
  * @param destWellNum Output well number
  * @param user Technician initials
  * @param serialNum Serial number of the Hamilton robot
  * @returns {*} Array of meta objects to be updated
  */
-function qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum){
+function qPCRPrepTracking(metas, destBC, destWellNum, user, serialNum){
   let metaArray = [];
 
   const pcrBC = metas.find(m => m.key === constants.META.QPCR_PLATE_BC);
@@ -493,22 +490,14 @@ function qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum)
 
 /**
  * Updates a Covid-19 Sample with the reagent lot number it was processed with
- * @param sampleID Unique ID of the sample in eLab
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param metas Array of meta fields associated with a SampleType
  * @param reagentNames Array of reagent names used
  * @param reagentNums Array of reagent lot numbers, matches the names by index
  * @returns {*} Array of meta objects to be updated
  */
-function reagentTracking(sampleID, metas, reagentNames, reagentNums){
+function reagentTracking(metas, reagentNames, reagentNums){
   reagentNames = stringToArray(reagentNames);
   reagentNums = stringToArray(reagentNums);
-
-  if(reagentNames.length !== reagentNums.length){
-    logger.error(`Length of reagent names do not match length of reagent lot numbers.
-                  SAMPLE ID:${sampleID} NOT CORRECTLY PROCESSED.`);
-    process.exitCode = 8;
-    return null;
-  }
 
   let metaArray = [];
   for (let i = 0; i < reagentNames.length; i++) {
@@ -519,8 +508,7 @@ function reagentTracking(sampleID, metas, reagentNames, reagentNums){
         type: reagentMeta.sampleDataType,
         metaID: reagentMeta.sampleTypeMetaID})); //Update reagent lot number
     } else {
-      logger.error(`Reagent field ${reagentNames[i]} cannot be found.
-                    SAMPLE ID:${sampleID} NOT CORRECTLY PROCESSED.`);
+      logger.error(`Reagent field ${reagentNames[i]} cannot be found.`);
       process.exitCode = 8;
     }
   }
@@ -530,8 +518,7 @@ function reagentTracking(sampleID, metas, reagentNames, reagentNums){
 
 /**
  * Calls the appropriate update function based on Hamilton protocol
- * @param sampleID Unique ID of the sample in eLab
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param metas Array of meta fields associated with a SampleType
  * @param protocol A string indicating which robot the log originated from
  * @param destBC Output plate barcode
  * @param destWellNum Output well number
@@ -539,14 +526,14 @@ function reagentTracking(sampleID, metas, reagentNames, reagentNums){
  * @param serialNum Serial number of the Hamilton robot
  * @returns {*} Array of meta objects to be updated
  */
-function lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, serialNum){
+function lineageTracking(metas, protocol, destBC, destWellNum, user, serialNum){
   switch(protocol){
     case constants.ORIGIN_VAL.SAMPLE_ALIQUOT:
-      return samplePrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
+      return samplePrepTracking(metas, destBC, destWellNum, user, serialNum);
     case constants.ORIGIN_VAL.RNA_EXTRACTION:
-      return rnaExtractionTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
+      return rnaExtractionTracking(metas, destBC, destWellNum, user, serialNum);
     case constants.ORIGIN_VAL.QPCR_PREP:
-      return qPCRPrepTracking(sampleID, metas, destBC, destWellNum, user, serialNum);
+      return qPCRPrepTracking(metas, destBC, destWellNum, user, serialNum);
   }
 }
 
@@ -578,7 +565,7 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
   }
 
   let sampleID = getSampleID(sampleObj);
-  let metas = getMetasForSampleType(sampleObj, sampleBC, indMetas, poolMetas);
+  let metas = getMetasForSample(sampleObj, sampleBC, indMetas, poolMetas);
   if(!metas){
     process.exitCode = 8;
     return;
@@ -587,13 +574,13 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
   let metaArray = []; //so we can update all the fields from the csv row in one API call
   let reagentNames = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NAMES];
   let reagentNums = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NUMS];
-  metaArray.push(...reagentTracking(sampleID, metas, reagentNames, reagentNums));
+  metaArray.push(...reagentTracking(metas, reagentNames, reagentNums));
 
   let destBC = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_BC];
   let destWellNum = csvRow[constants.HAMILTON_LOG_HEADERS.DEST_WELL_NUM];
   let user = csvRow[constants.HAMILTON_LOG_HEADERS.USER];
   let serialNum = csvRow[constants.HAMILTON_LOG_HEADERS.SERIAL_NUM];
-  metaArray.push(...lineageTracking(sampleID, metas, protocol, destBC, destWellNum, user, serialNum));
+  metaArray.push(...lineageTracking(metas, protocol, destBC, destWellNum, user, serialNum));
 
   // if qPCR prep && sampleType is pooled, then update all children
   if(protocol === constants.ORIGIN_VAL.QPCR_PREP && getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
@@ -607,8 +594,8 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
     for(const child of children){
       let childMetaArr = [];
       const childID = child.sampleID;
-      childMetaArr.push(...reagentTracking(childID, indMetas, reagentNames, reagentNums));
-      childMetaArr.push(...lineageTracking(childID, metas, protocol, destBC, destWellNum, user, serialNum));
+      childMetaArr.push(...reagentTracking(indMetas, reagentNames, reagentNums));
+      childMetaArr.push(...lineageTracking(metas, protocol, destBC, destWellNum, user, serialNum));
       await updateMetas(childID, childMetaArr);
     }
   }
@@ -624,7 +611,7 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
 /**
  * Increases number of attempt by 1 if allowed and returns the total number of attempts
  * @param sampleObj data object of the sample from eLab
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param metas Array of meta fields associated with a SampleType
  * @returns {*} Meta object for number of attempts
  */
 function increaseAttempt(sampleObj, metas){
@@ -644,7 +631,7 @@ function increaseAttempt(sampleObj, metas){
 /**
  * Updates status and result of samples that belong to the plate which had a failed control
  * @param sampleObj data object of the sample from eLab
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param metas Array of meta fields associated with a SampleType
  * @param statusConst Either "Re-run qPCR" or "Re-run RNA Extraction"
  * @param numAttempt Number of attempts for this sample
  * @returns {*} Array of meta objects to be updated
@@ -691,7 +678,7 @@ function updateFailed(sampleObj, metas, statusConst, numAttempt){
 /**
  * Updates status and result of samples that did not fail its control sample
  * @param sampleObj data object of the sample from eLab
- * @param metas Array of meta fields associated with the COVID-19 SampleType
+ * @param metas Array of meta fields associated with a SampleType
  * @param call Result of the well from the Call column of the qPCR output
  * @returns {*} Array of meta objects to be updated
  */
@@ -707,7 +694,6 @@ function updatePassed(sampleObj, metas, call){
   const sampleTypeID = getSampleTypeID(sampleObj);
   const status = metas.find(m => m.key === constants.META.STATUS);
   if( sampleTypeID === config.get("covidSampleTypeID")){
-    console.log("child here");
     metaArray.push(createMetaObj({key: constants.META.STATUS,
       value: constants.STATUS_VAL.QPCR_DONE,
       type: status.sampleDataType,
@@ -790,7 +776,7 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
   }
 
   let sampleID = getSampleID(sampleObj);
-  let metas = getMetasForSampleType(sampleObj, sampleBC, indMetas, poolMetas);
+  let metas = getMetasForSample(sampleObj, sampleBC, indMetas, poolMetas);
   if(!metas){
     process.exitCode = 8;
     return;
@@ -858,7 +844,7 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
   }
 
   let sampleID = getSampleID(sampleObj);
-  let metas = getMetasForSampleType(sampleObj, sampleBC, indMetas, poolMetas);
+  let metas = getMetasForSample(sampleObj, sampleBC, indMetas, poolMetas);
   if(!metas){
     process.exitCode = 8;
     return;
