@@ -67,7 +67,8 @@ function getNumAttempts(patientSample){
 }
 
 function getPerformed(patientSample){
-  return patientSample.data[0].meta.find(m => m.key === constants.META.PERFORMED).value;
+  let data = patientSample.data? patientSample.data[0] : patientSample;
+  return data.meta.find(m => m.key === constants.META.PERFORMED).value;
 }
 
 function getSampleID(patientSample){
@@ -80,7 +81,6 @@ function getSampleTypeID(patientSample){
   } else {
     return patientSample.sampleTypeID;
   }
-
 }
 
 function getChildren(pooledSample){
@@ -90,6 +90,20 @@ function getChildren(pooledSample){
     return null;
   }
   return pooledSample.data[0].children;
+}
+
+function getParent(patientSample){
+  return patientSample.data? patientSample.data[0].parentSampleID : patientSample.parentSampleID;
+}
+
+function isChild(patientSample){
+  return getSampleTypeID(patientSample) === config.get("covidSampleTypeID")
+    && getPerformed(patientSample) === constants.POOLED.POOLED
+    && getParent(patientSample) !== "0";
+}
+
+function isParent(pooledSample){
+  return getSampleTypeID(pooledSample) === config.get("pooledSampleTypeID") && pooledSample.data[0].children.length > 0;
 }
 
 function stringToArray(str){
@@ -630,13 +644,13 @@ function increaseAttempt(sampleObj, metas){
 
 /**
  * Updates status and result of samples that belong to the plate which had a failed control
- * @param sampleObj data object of the sample from eLab
  * @param metas Array of meta fields associated with a SampleType
  * @param statusConst Either "Re-run qPCR" or "Re-run RNA Extraction"
  * @param numAttempt Number of attempts for this sample
+ * @param isParent
  * @returns {*} Array of meta objects to be updated
  */
-function updateFailed(sampleObj, metas, statusConst, numAttempt){
+function updateFailed(metas, statusConst, numAttempt, isParent=false){
   let metaArray = [];
   const result = metas.find(m => m.key === constants.META.RESULT);
   const status = metas.find(m => m.key === constants.META.STATUS);
@@ -658,17 +672,16 @@ function updateFailed(sampleObj, metas, statusConst, numAttempt){
       type: result.sampleDataType,
       metaID: result.sampleTypeMetaID})); //Update Test Result to "Invalid - recollect"
 
-    const sampleTypeID = getSampleTypeID(sampleObj);
-    if( sampleTypeID === config.get("covidSampleTypeID")){
-      metaArray.push(createMetaObj({key: constants.META.STATUS,
-        value: constants.STATUS_VAL.QPCR_DONE,
-        type: status.sampleDataType,
-        metaID: status.sampleTypeMetaID})); //update status to "Finished"
-    } else if (sampleTypeID === config.get("pooledSampleTypeID")){
+    if(isParent){
       metaArray.push(createMetaObj({key: constants.META.STATUS,
         value: constants.STATUS_VAL.QPCR_COMPLETE,
         type: status.sampleDataType,
         metaID: status.sampleTypeMetaID})); //update status to "qPCR Completed"
+    } else {
+      metaArray.push(createMetaObj({key: constants.META.STATUS,
+        value: constants.STATUS_VAL.QPCR_DONE,
+        type: status.sampleDataType,
+        metaID: status.sampleTypeMetaID})); //update status to "Finished"
     }
   }
 
@@ -677,32 +690,44 @@ function updateFailed(sampleObj, metas, statusConst, numAttempt){
 
 /**
  * Updates status and result of samples that did not fail its control sample
- * @param sampleObj data object of the sample from eLab
  * @param metas Array of meta fields associated with a SampleType
  * @param call Result of the well from the Call column of the qPCR output
+ * @param isParent Boolean for if the sample is a pooled parent
+ * @param isChild Boolean for if the sample is a pooled child
  * @returns {*} Array of meta objects to be updated
  */
-function updatePassed(sampleObj, metas, call){
+function updatePassed(metas, call, isParent=false, isChild=false){
   let metaArray = [];
 
+  let callVal = constants.TEST_RESULT[call];
+  let isPos = call === 'POSITIVE';
+  let isInvalid = call === 'INVALID';
+
+  if(isPos && (isParent || isChild)){
+    callVal =  constants.POOLED.POSITIVE;
+  }
   const result = metas.find(m => m.key === constants.META.RESULT);
   metaArray.push(createMetaObj({key: constants.META.RESULT,
-    value: constants.TEST_RESULT[call],
+    value: callVal,
     type: result.sampleDataType,
-    metaID: result.sampleTypeMetaID})); //update COVID-19 Test Result
+    metaID: result.sampleTypeMetaID})); //update Test Result
 
-  const sampleTypeID = getSampleTypeID(sampleObj);
+  let statusVal = constants.STATUS_VAL.QPCR_DONE;
+  if (isParent || (isChild && isInvalid) || (isChild && isPos)){
+    statusVal = constants.STATUS_VAL.QPCR_COMPLETE;
+  }
   const status = metas.find(m => m.key === constants.META.STATUS);
-  if( sampleTypeID === config.get("covidSampleTypeID")){
-    metaArray.push(createMetaObj({key: constants.META.STATUS,
-      value: constants.STATUS_VAL.QPCR_DONE,
-      type: status.sampleDataType,
-      metaID: status.sampleTypeMetaID})); //update status to "Finished"
-  } else if (sampleTypeID === config.get("pooledSampleTypeID")){
-    metaArray.push(createMetaObj({key: constants.META.STATUS,
-      value: constants.STATUS_VAL.QPCR_COMPLETE,
-      type: status.sampleDataType,
-      metaID: status.sampleTypeMetaID})); //update status to "qPCR Completed"
+  metaArray.push(createMetaObj({key: constants.META.STATUS,
+    value: statusVal,
+    type: status.sampleDataType,
+    metaID: status.sampleTypeMetaID})); //update Status
+
+  if(isChild){
+    const performed = metas.find(m => m.key === constants.META.PERFORMED);
+    metaArray.push(createMetaObj({key: constants.META.PERFORMED,
+      value: constants.POOLED.INDIVIDUAL,
+      type: performed.sampleDataType,
+      metaID: performed.sampleTypeMetaID})); //set Performed to Individual
   }
 
   return metaArray;
@@ -710,8 +735,8 @@ function updatePassed(sampleObj, metas, call){
 
 /**
  * Helper function for building metas for test results
- * @param metas Array of meta fields associated with a SampleType
  * @param sampleObj data object of the sample from eLab
+ * @param metas Array of meta fields associated with a SampleType
  * @param failedWells Dictionary of all possible failed wells and their respective status
  * @param user Initials of the technician who initiated the qPCR run
  * @param serialNum Serial number of the qPCR machine
@@ -719,7 +744,7 @@ function updatePassed(sampleObj, metas, call){
  * @param call Result of the well from the Call column of the qPCR output
  * @returns {Array}
  */
-function buildResultMetas(metas, sampleObj, failedWells, user, serialNum, wellNum, call){
+function buildResultMetas(sampleObj, metas,  failedWells, user, serialNum, wellNum, call){
   let metaArray = [];
   const userMeta = metas.find(meta => meta.key === constants.META.QPCR_TECH);
   metaArray.push(createMetaObj({
@@ -738,11 +763,10 @@ function buildResultMetas(metas, sampleObj, failedWells, user, serialNum, wellNu
   let numAttemptMetaObj = increaseAttempt(sampleObj, metas);
   metaArray.push(numAttemptMetaObj);
 
-
   if (wellNum in failedWells){
-    metaArray.push(...updateFailed(sampleObj, metas, failedWells[wellNum], numAttemptMetaObj.value));
+    metaArray.push(...updateFailed(metas, failedWells[wellNum], numAttemptMetaObj.value, isParent(sampleObj)));
   } else {
-    metaArray.push(...updatePassed(sampleObj, metas, call));
+    metaArray.push(...updatePassed(metas, call, isParent(sampleObj), isChild(sampleObj)));
   }
 
   return metaArray;
@@ -775,7 +799,6 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
     return;
   }
 
-  let sampleID = getSampleID(sampleObj);
   let metas = getMetasForSample(sampleObj, sampleBC, indMetas, poolMetas);
   if(!metas){
     process.exitCode = 8;
@@ -784,7 +807,7 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
 
   let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
   let call = csvRow[constants.QPCR_LOG_HEADERS.CALL];
-  let metaArray = buildResultMetas(metas, sampleObj, failedWells, user, serialNum, wellNum, call);
+  let metaArray = buildResultMetas(sampleObj, metas, failedWells, user, serialNum, wellNum, call);
 
   // update its children, if pooled
   if(getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
@@ -797,11 +820,12 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
     }
     for(const child of children){
       const childID = child.sampleID;
-      let childMetaArr = buildResultMetas(indMetas, child, failedWells, user, serialNum, wellNum, call);
+      let childMetaArr = buildResultMetas(child, indMetas, failedWells, user, serialNum, wellNum, call);
       await updateMetas(childID, childMetaArr);
     }
   }
 
+  let sampleID = getSampleID(sampleObj);
   return Promise.resolve(await updateMetas(sampleID, metaArray));
 }
 

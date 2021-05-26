@@ -89,7 +89,8 @@ const MAX_ATTEMPTS = 5;
 //constants that are unique to pooled testing
 const POOLED = {
   INDIVIDUAL: "Individual",
-  POOLED:  "Pooled"
+  POOLED:  "Pooled",
+  POSITIVE:  "Presumptive Positive",
 };
 
 module.exports = {
