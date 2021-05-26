@@ -77,12 +77,7 @@ function getSampleTypeID(patientSample){
 }
 
 function getChildren(pooledSample){
-  // check that all children are of COVID-19 sampleType
-  const nonCOVID = pooledSample.data[0].children.some(child => child.sampleTypeID !== config.get('covidSampleTypeID'));
-  if(nonCOVID){
-    return null;
-  }
-  return pooledSample.data[0].children;
+  return pooledSample.data? pooledSample.data[0].children : pooledSample.children;
 }
 
 function getParentID(patientSample){
@@ -97,6 +92,10 @@ function isChild(patientSample){
 
 function isParent(pooledSample){
   return getSampleTypeID(pooledSample) === config.get("pooledSampleTypeID") && pooledSample.data[0].children.length > 0;
+}
+
+function getMetasForSample(sampleObj, indMetas, poolMetas){
+  return getSampleTypeID(sampleObj) === config.get('covidSampleTypeID')? indMetas : poolMetas;
 }
 
 function stringToArray(str){
@@ -149,30 +148,47 @@ function createMetaObj({key, value, type, metaID}={}){
   }
 }
 
-function getMetasForSample(sampleObj, sampleBC, indMetas, poolMetas){
-  let sampleTypeID = getSampleTypeID(sampleObj);
+function validChildren(children, sampleBC){
+  // check that all children are of COVID-19 sampleType
+  const nonCOVID = children.some(child => child.sampleTypeID !== config.get('covidSampleTypeID'));
+  if(nonCOVID){
+    logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
+                    Results for sampleBC ${sampleBC} NOT processed.`);
+    return false;
+  }
 
+  // check that all the children as performed as "pooled"
+  const nonPooled = children.some(child => getPerformed(child) !== constants.POOLED.POOLED);
+  if(nonPooled){
+    logger.error(`Not all children of pooled sample ${sampleBC} are Performed as "pooled". 
+                    Results for sampleBC ${sampleBC} NOT processed.`);
+    return false;
+  }
+
+  return true;
+}
+
+function isValidLogSample(sampleObj, sampleBC){
+  const sampleTypeID = getSampleTypeID(sampleObj);
   if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
     logger.error(`Unrecognized SampleTypeID ${sampleTypeID}. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
-    return;
+    return false;
   }
 
   if (sampleTypeID === config.get('covidSampleTypeID')){
     let performed = getPerformed(sampleObj);
     if(isEmpty(performed)){
       logger.error(`"Performed" attribute of SAMPLE BC:${sampleBC} is empty. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
-      process.exitCode = 8;
-      return;
+      return false;
     }
     if (performed === constants.POOLED.POOLED){
       logger.error(`SAMPLE BC:${sampleBC} is a COVID-19 Sample and performed as "pooled" and thus should not appear in the 
                   log. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
-      process.exitCode = 8;
-      return;
+      return false;
     }
   }
 
-  return sampleTypeID === config.get('covidSampleTypeID')? indMetas : poolMetas;
+  return true;
 }
 
 
@@ -571,12 +587,11 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
     return;
   }
 
-  let sampleID = getSampleID(sampleObj);
-  let metas = getMetasForSample(sampleObj, sampleBC, indMetas, poolMetas);
-  if(!metas){
+  if(!isValidLogSample(sampleObj)){
     process.exitCode = 8;
     return;
   }
+  let metas = getMetasForSample(sampleObj, indMetas, poolMetas);
 
   let metaArray = []; //so we can update all the fields from the csv row in one API call
   let reagentNames = csvRow[constants.HAMILTON_LOG_HEADERS.REAGENT_NAMES];
@@ -592,9 +607,7 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
   // if qPCR prep && sampleType is pooled, then update all children
   if(protocol === constants.ORIGIN_VAL.QPCR_PREP && getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
     let children = getChildren(sampleObj);
-    if(!children){
-      logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
-                    Results for sampleBC ${sampleBC} NOT processed.`);
+    if(!validChildren(children, sampleBC)){
       process.exitCode = 8;
       return;
     }
@@ -607,6 +620,7 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
     }
   }
 
+  let sampleID = getSampleID(sampleObj);
   return Promise.resolve(updateMetas(sampleID, metaArray));
 }
 
@@ -792,22 +806,21 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
     return;
   }
 
-  let metas = getMetasForSample(sampleObj, sampleBC, indMetas, poolMetas);
-  if(!metas){
+  if(!isValidLogSample(sampleObj)){
     process.exitCode = 8;
     return;
   }
+
+  let metas = getMetasForSample(sampleObj, indMetas, poolMetas);
 
   let wellNum = csvRow[constants.QPCR_LOG_HEADERS.WELL];
   let call = csvRow[constants.QPCR_LOG_HEADERS.CALL];
   let metaArray = buildResultMetas(sampleObj, metas, failedWells, user, serialNum, wellNum, call);
 
   // update its children, if pooled
-  if(getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
+  if(isParent(sampleObj)){
     let children = getChildren(sampleObj);
-    if(!children){
-      logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
-                    Results for sampleBC ${sampleBC} NOT processed.`);
+    if(!validChildren(children, sampleBC)){
       process.exitCode = 8;
       return;
     }
@@ -860,12 +873,12 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
     return;
   }
 
-  let sampleID = getSampleID(sampleObj);
-  let metas = getMetasForSample(sampleObj, sampleBC, indMetas, poolMetas);
-  if(!metas){
+  if(!isValidLogSample(sampleObj)){
     process.exitCode = 8;
     return;
   }
+
+  let metas = getMetasForSample(sampleObj, indMetas, poolMetas);
 
   if(!(sampleBC in allSampleCTs)){
     allSampleCTs[sampleBC] = [];
@@ -877,14 +890,13 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
 
   // update record when all 3 records are processed
   if(allSampleCTs[sampleBC].length === 3){
+    let sampleID = getSampleID(sampleObj);
     await updateMetas(sampleID, allSampleCTs[sampleBC]);
 
     // and update its children, if pooled
     if(getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
       let children = getChildren(sampleObj);
-      if(!children){
-        logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
-                    Results for sampleBC ${sampleBC} NOT processed.`);
+      if(!validChildren(children, sampleBC)){
         process.exitCode = 8;
         return;
       }
