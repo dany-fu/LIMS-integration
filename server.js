@@ -59,11 +59,8 @@ function isEven(num) {
 }
 
 function getNumAttempts(patientSample){
-  if(patientSample.data){
-    return patientSample.data[0].meta.find(m => m.key === constants.META.NUM_ATTEMPTS).value;
-  } else {
-    return patientSample.meta.find(m => m.key === constants.META.NUM_ATTEMPTS).value;
-  }
+  let  data = patientSample.data? patientSample.data[0] : patientSample;
+  return data.meta.find(m => m.key === constants.META.NUM_ATTEMPTS).value;
 }
 
 function getPerformed(patientSample){
@@ -72,15 +69,11 @@ function getPerformed(patientSample){
 }
 
 function getSampleID(patientSample){
-  return patientSample.data[0].sampleID;
+  return patientSample.data? patientSample.data[0].sampleID : patientSample.sampleID;
 }
 
 function getSampleTypeID(patientSample){
-  if(patientSample.data){
-    return patientSample.data[0].sampleTypeID;
-  } else {
-    return patientSample.sampleTypeID;
-  }
+  return patientSample.data? patientSample.data[0].sampleTypeID : patientSample.sampleTypeID;
 }
 
 function getChildren(pooledSample){
@@ -92,14 +85,14 @@ function getChildren(pooledSample){
   return pooledSample.data[0].children;
 }
 
-function getParent(patientSample){
+function getParentID(patientSample){
   return patientSample.data? patientSample.data[0].parentSampleID : patientSample.parentSampleID;
 }
 
 function isChild(patientSample){
   return getSampleTypeID(patientSample) === config.get("covidSampleTypeID")
     && getPerformed(patientSample) === constants.POOLED.POOLED
-    && getParent(patientSample) !== "0";
+    && getParentID(patientSample) !== "0";
 }
 
 function isParent(pooledSample){
