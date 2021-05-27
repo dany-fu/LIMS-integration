@@ -80,6 +80,20 @@ function getChildren(pooledSample){
   return pooledSample.data? pooledSample.data[0].children : pooledSample.children;
 }
 
+function getValidChildren(sampleObj, sampleBC){
+  let children = getChildren(sampleObj);
+
+  // check that all children are of COVID-19 sampleType
+  const nonCOVID = children.some(child => child.sampleTypeID !== config.get('covidSampleTypeID'));
+  if(nonCOVID){
+    logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
+                    Results for sampleBC ${sampleBC} NOT processed.`);
+    return null;
+  }
+
+  return children.filter(child => getPerformed(child) === constants.POOLED.POOLED);
+}
+
 function getParentID(patientSample){
   return patientSample.data? patientSample.data[0].parentSampleID : patientSample.parentSampleID;
 }
@@ -148,26 +162,6 @@ function createMetaObj({key, value, type, metaID}={}){
   }
 }
 
-function validChildren(children, sampleBC){
-  // check that all children are of COVID-19 sampleType
-  const nonCOVID = children.some(child => child.sampleTypeID !== config.get('covidSampleTypeID'));
-  if(nonCOVID){
-    logger.error(`Not all children of pooled sample ${sampleBC} are of sample type COVID-19 Sample. 
-                    Results for sampleBC ${sampleBC} NOT processed.`);
-    return false;
-  }
-
-  // check that all the children as performed as "pooled"
-  const nonPooled = children.some(child => getPerformed(child) !== constants.POOLED.POOLED);
-  if(nonPooled){
-    logger.error(`Not all children of pooled sample ${sampleBC} are Performed as "pooled". 
-                    Results for sampleBC ${sampleBC} NOT processed.`);
-    return false;
-  }
-
-  return true;
-}
-
 function isValidLogSample(sampleObj, sampleBC){
   const sampleTypeID = getSampleTypeID(sampleObj);
   if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
@@ -175,7 +169,7 @@ function isValidLogSample(sampleObj, sampleBC){
     return false;
   }
 
-  if (sampleTypeID === config.get('covidSampleTypeID' && getPerformed(sampleObj) === constants.POOLED.POOLED)){
+  if (sampleTypeID === config.get('covidSampleTypeID') && getPerformed(sampleObj) === constants.POOLED.POOLED){
     logger.error(`SAMPLE BC:${sampleBC} is a COVID-19 Sample and performed as "pooled" and thus should not appear in the 
                 log. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
     return false;
@@ -580,7 +574,7 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
     return;
   }
 
-  if(!isValidLogSample(sampleObj)){
+  if(!isValidLogSample(sampleObj, sampleBC)){
     process.exitCode = 8;
     return;
   }
@@ -599,8 +593,8 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
 
   // if qPCR prep && sampleType is pooled, then update all children
   if(protocol === constants.ORIGIN_VAL.QPCR_PREP && getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
-    let children = getChildren(sampleObj);
-    if(!validChildren(children, sampleBC)){
+    let children = getValidChildren(sampleObj);
+    if(!children){
       process.exitCode = 8;
       return;
     }
@@ -799,7 +793,7 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
     return;
   }
 
-  if(!isValidLogSample(sampleObj)){
+  if(!isValidLogSample(sampleObj, sampleBC)){
     process.exitCode = 8;
     return;
   }
@@ -812,8 +806,8 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
 
   // update its children, if pooled
   if(isParent(sampleObj)){
-    let children = getChildren(sampleObj);
-    if(!validChildren(children, sampleBC)){
+    let children = getValidChildren(sampleObj);
+    if(!children){
       process.exitCode = 8;
       return;
     }
@@ -866,7 +860,7 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
     return;
   }
 
-  if(!isValidLogSample(sampleObj)){
+  if(!isValidLogSample(sampleObj, sampleBC)){
     process.exitCode = 8;
     return;
   }
@@ -888,8 +882,8 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
 
     // and update its children, if pooled
     if(getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
-      let children = getChildren(sampleObj);
-      if(!validChildren(children, sampleBC)){
+      let children = getValidChildren(sampleObj);
+      if(!children){
         process.exitCode = 8;
         return;
       }
