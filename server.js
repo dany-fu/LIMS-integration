@@ -175,17 +175,10 @@ function isValidLogSample(sampleObj, sampleBC){
     return false;
   }
 
-  if (sampleTypeID === config.get('covidSampleTypeID')){
-    let performed = getPerformed(sampleObj);
-    if(isEmpty(performed)){
-      logger.error(`"Performed" attribute of SAMPLE BC:${sampleBC} is empty. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
-      return false;
-    }
-    if (performed === constants.POOLED.POOLED){
-      logger.error(`SAMPLE BC:${sampleBC} is a COVID-19 Sample and performed as "pooled" and thus should not appear in the 
-                  log. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
-      return false;
-    }
+  if (sampleTypeID === config.get('covidSampleTypeID' && getPerformed(sampleObj) === constants.POOLED.POOLED)){
+    logger.error(`SAMPLE BC:${sampleBC} is a COVID-19 Sample and performed as "pooled" and thus should not appear in the 
+                log. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+    return false;
   }
 
   return true;
