@@ -591,8 +591,8 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
   let serialNum = csvRow[constants.HAMILTON_LOG_HEADERS.SERIAL_NUM];
   metaArray.push(...lineageTracking(metas, protocol, destBC, destWellNum, user, serialNum));
 
-  // if qPCR prep && sampleType is pooled, then update all children
-  if(protocol === constants.ORIGIN_VAL.QPCR_PREP && getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
+  // if qPCR prep && sample is a parent, then update all children
+  if(protocol === constants.ORIGIN_VAL.QPCR_PREP && isParent(sampleObj)){
     let children = getValidChildren(sampleObj);
     if(!children){
       process.exitCode = 8;
@@ -697,6 +697,7 @@ function updatePassed(metas, call, isParent=false, isChild=false){
   let isPos = call === 'POSITIVE';
   let isInvalid = call === 'INVALID';
 
+  // if pooled sample is positive, map to Presumptive Positive
   if(isPos && (isParent || isChild)){
     callVal =  constants.POOLED.POSITIVE;
   }
@@ -716,12 +717,13 @@ function updatePassed(metas, call, isParent=false, isChild=false){
     type: status.sampleDataType,
     metaID: status.sampleTypeMetaID})); //update Status
 
-  if(isChild){
+  // Flip children to Individual if the parent is invalid or positive
+  if(isChild && (isInvalid || isPos)){
     const performed = metas.find(m => m.key === constants.META.PERFORMED);
     metaArray.push(createMetaObj({key: constants.META.PERFORMED,
       value: constants.POOLED.INDIVIDUAL,
       type: performed.sampleDataType,
-      metaID: performed.sampleTypeMetaID})); //set Performed to Individual
+      metaID: performed.sampleTypeMetaID}));
   }
 
   return metaArray;
