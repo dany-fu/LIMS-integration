@@ -479,7 +479,7 @@ function qPCRPrepTracking(metas, destBC, destWellNum, user, serialNum){
     key: constants.META.STATUS,
     value: constants.STATUS_VAL.QPCR_PREP_DONE,
     type: status.sampleDataType,
-    metaID: status.sampleTypeMetaID})); //update status to "qPCR Reactions Prepared"
+    metaID: status.sampleTypeMetaID})); //update status to "qPCR Plate Prepared"
 
   const userMeta = metas.find(meta => meta.key === constants.META.QPCR_PREP_TECH);
   metaArray.push(createMetaObj({
@@ -602,7 +602,7 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
       let childMetaArr = [];
       const childID = child.sampleID;
       childMetaArr.push(...reagentTracking(indMetas, reagentNames, reagentNums));
-      childMetaArr.push(...lineageTracking(metas, protocol, destBC, destWellNum, user, serialNum));
+      childMetaArr.push(...lineageTracking(indMetas, protocol, destBC, destWellNum, user, serialNum));
       await updateMetas(childID, childMetaArr);
     }
   }
