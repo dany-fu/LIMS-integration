@@ -13,11 +13,12 @@ This repository contains code for
 4) Copy the node executable to the server
 5) Configure a link to the executable so that the keyword `node` is recognized
 6) Type `node --version` on the CLI to verify
-7) Enter in eLabs username and password in the the config files in `/config`    
+7) Enter in eLabs login token in the the config files in `/config`    
 8) The NODE_ENV variable must be set which matches one of the config file names. For example, `export NODE_ENV=sandbox`
 
 ### Logging
 * Daily error logs will print to `logs/error-M-DD-YYYY.log`    
+    * Will log a new line for every file that is processed, regardless if error occurred. This is for email parsing purposes. 
 * Daily combined logs (both errors and info) will print to `logs/combined-M-DD-YYYY.log`    
 * The timestamp in each file will default to the timezone of the server, and are formatted as `M/D/YYYY, hh:mm:ss A Z`, 
 where Z is the offset from UTC  
@@ -99,6 +100,17 @@ Status is to be considered Finished.**
 
 ### qPCR Plate Layout
 
+Stamping configuration of 4 qPCR Prep plates onto one qPCR plate
+
 ![qPCR_plate](https://user-images.githubusercontent.com/7750862/87336835-7b7a9080-c510-11ea-9b4e-a54849ea1426.png)
 
 Key: Plate 1 (Red), Plate 2 (Green), Plate 3 (Yellow), Plate 4 (Blue)
+
+### Pooled Sample Processing
+* All samples in `SAMPLE_ALIQUOT` and `RNA_EXTRACTION` logfiles are expected to be parent "Pooled COVID-19 Sample" 
+or "COVID-19 Sample"  performed as "Individual". No children are updated in these 2 processes.
+* Children performed as "Pooled" will be updated from `QPCR_PREP`, Well Call, and Target Call files
+    * Children performed as "Individual" will be silently skipped 
+* Children whose parent has an invalid test result will be marked as "qPCR Completed" & "Invalid" & "Individual"
+* Children whose parent has a positive test result will be marked as "qPCR Completed" & "Presumptive positive" & "Individual"
+* Pooled COVID-19 Sample will always be set to "qPCR Completed", never "Finished"
