@@ -21,7 +21,8 @@ const META = {
   EXTRACTION_SN: "RNA Extraction Instrument SN",
   QPCR_PREP_SN: "qPCR Prep Instrument SN",
   QPCR_SN: "qPCR SN",
-  PERFORMED: "Performed"
+  PERFORMED: "Performed",
+  TUBE_CONDITION: "Sample Tube Condition"
 };
 
 const STATUS_VAL = {
@@ -93,6 +94,11 @@ const POOLED = {
   POSITIVE:  "Presumptive Positive",
 };
 
+const TUBE_CONDITION = {
+  OK: "OK",
+  DAMAGED: "Damaged"
+};
+
 module.exports = {
   HAMILTON_LOG_HEADERS: HAMILTON_LOG_HEADERS,
   QPCR_LOG_HEADERS: QPCR_LOG_HEADERS,
@@ -104,5 +110,6 @@ module.exports = {
   CONTROL_WELLS: CONTROL_WELLS,
   PLATE384: PLATE384,
   MAX_ATTEMPTS: MAX_ATTEMPTS,
-  POOLED: POOLED
+  POOLED: POOLED,
+  TUBE_CONDITION: TUBE_CONDITION
 };

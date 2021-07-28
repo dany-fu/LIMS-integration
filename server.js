@@ -108,6 +108,12 @@ function isParent(pooledSample){
   return getSampleTypeID(pooledSample) === config.get("pooledSampleTypeID");
 }
 
+function isValidParent(pooledSample){
+  return getSampleTypeID(pooledSample) === config.get("pooledSampleTypeID") &&
+    pooledSample.data[0].children.length > 0 &&
+    pooledSample.data[0].children.length < 6;
+}
+
 function getMetasForSample(sampleObj, indMetas, poolMetas){
   return getSampleTypeID(sampleObj) === config.get('covidSampleTypeID')? indMetas : poolMetas;
 }
@@ -687,10 +693,11 @@ function updateFailed(metas, statusConst, numAttempt, isParent=false){
  * @param metas Array of meta fields associated with a SampleType
  * @param call Result of the well from the Call column of the qPCR output
  * @param isParent Boolean for if the sample is a pooled parent
+ * @param isValidParent Boolean for if sample is pooled and have valid number of children
  * @param isChild Boolean for if the sample is a pooled child
  * @returns {*} Array of meta objects to be updated
  */
-function updatePassed(metas, call, isParent=false, isChild=false){
+function updatePassed(metas, call, isParent=false, isValidParent=true, isChild=false){
   let metaArray = [];
 
   let callVal = constants.TEST_RESULT[call];
@@ -724,6 +731,15 @@ function updatePassed(metas, call, isParent=false, isChild=false){
       value: constants.POOLED.INDIVIDUAL,
       type: performed.sampleDataType,
       metaID: performed.sampleTypeMetaID}));
+  }
+
+  // flip tube condition to "damaged" if 0< children >6
+  if (isParent && !isValidParent){
+    const tube = metas.find(m => m.key === constants.META.TUBE_CONDITION);
+    metaArray.push(createMetaObj({key: constants.META.TUBE_CONDITION,
+      value: constants.TUBE_CONDITION.DAMAGED,
+      type: tube.sampleDataType,
+      metaID: tube.sampleTypeMetaID}));
   }
 
   return metaArray;
@@ -762,7 +778,7 @@ function buildResultMetas(sampleObj, metas,  failedWells, user, serialNum, wellN
   if (wellNum in failedWells){
     metaArray.push(...updateFailed(metas, failedWells[wellNum], numAttemptMetaObj.value, isParent(sampleObj)));
   } else {
-    metaArray.push(...updatePassed(metas, call, isParent(sampleObj), isChild(sampleObj)));
+    metaArray.push(...updatePassed(metas, call, isParent(sampleObj), isValidParent(sampleObj), isChild(sampleObj)));
   }
 
   return metaArray;
