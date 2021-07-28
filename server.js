@@ -105,7 +105,7 @@ function isChild(patientSample){
 }
 
 function isParent(pooledSample){
-  return getSampleTypeID(pooledSample) === config.get("pooledSampleTypeID") && pooledSample.data[0].children.length > 0;
+  return getSampleTypeID(pooledSample) === config.get("pooledSampleTypeID");
 }
 
 function getMetasForSample(sampleObj, indMetas, poolMetas){
