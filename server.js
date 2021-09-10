@@ -176,8 +176,8 @@ function isValidLogSample(sampleObj, sampleBC){
   }
 
   if (sampleTypeID === config.get('covidSampleTypeID') && getPerformed(sampleObj) === constants.POOLED.POOLED){
-    logger.error(`SAMPLE BC:${sampleBC} is a COVID-19 Sample and performed as "pooled" and thus should not appear in the 
-                log. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
+    logger.error(`SAMPLE BC:${sampleBC} is a COVID-19 Sample and performed as "pooled" and thus should not appear in the log. 
+                  SAMPLE BC:${sampleBC} NOT PROCESSED.`);
     return false;
   }
 
