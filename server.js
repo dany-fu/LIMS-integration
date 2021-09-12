@@ -599,7 +599,7 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
 
   // if qPCR prep && sample is a parent, then update all children
   if(protocol === constants.ORIGIN_VAL.QPCR_PREP && isParent(sampleObj)){
-    let children = getValidChildren(sampleObj);
+    let children = getValidChildren(sampleObj, sampleBC);
     if(!children){
       process.exitCode = 8;
       return;
@@ -824,7 +824,7 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
 
   // update its children, if pooled
   if(isParent(sampleObj)){
-    let children = getValidChildren(sampleObj);
+    let children = getValidChildren(sampleObj, sampleBC);
     if(!children){
       process.exitCode = 8;
       return;
@@ -900,7 +900,7 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
 
     // and update its children, if pooled
     if(getSampleTypeID(sampleObj) === config.get('pooledSampleTypeID')){
-      let children = getValidChildren(sampleObj);
+      let children = getValidChildren(sampleObj, sampleBC);
       if(!children){
         process.exitCode = 8;
         return;
