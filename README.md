@@ -62,7 +62,7 @@ where Z is the offset from UTC
    - The input file will be overwritten and will not contain empty lines at the start of the file    
    - Output file headers:   
       - Sample Tube Barcode    
-      - eLab Sample ID - either the IDs *or* error values: `NOT FOUND`, `DUPLICATE`, or `ERROR`    
+      - eLab Sample ID - either the IDs *or* error values: `NOT FOUND`, `DUPLICATE`, `INDIVIDUAL POOLED`, or `ERROR`    
 * Existing eLab SampleType and custom fields should not be altered     
    - Expected fields are defined in `constants.js`    
 * **File contents and eLab fields are case and white-space sensitive**

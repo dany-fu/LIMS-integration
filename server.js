@@ -168,19 +168,22 @@ function createMetaObj({key, value, type, metaID}={}){
   }
 }
 
-function isValidLogSample(sampleObj, sampleBC){
+function isValidSampleType(sampleObj, sampleBC){
   const sampleTypeID = getSampleTypeID(sampleObj);
   if (sampleTypeID !== config.get('covidSampleTypeID') && sampleTypeID !== config.get('pooledSampleTypeID')){
     logger.error(`Unrecognized SampleTypeID ${sampleTypeID}. SAMPLE BC:${sampleBC} NOT PROCESSED.`);
     return false;
   }
+  return true;
+}
 
+function isValidLogSample(sampleObj, sampleBC){
+  const sampleTypeID = getSampleTypeID(sampleObj);
   if (sampleTypeID === config.get('covidSampleTypeID') && getPerformed(sampleObj) === constants.POOLED.POOLED){
     logger.error(`SAMPLE BC:${sampleBC} is a COVID-19 Sample and performed as "pooled" and thus should not appear in the log. 
                   SAMPLE BC:${sampleBC} NOT PROCESSED.`);
     return false;
   }
-
   return true;
 }
 
@@ -257,7 +260,7 @@ async function getPatientSample(barcode, prefetch=false, retries=5){
         if(res.data.data.length === 0){
           logger.error(`Sample for barcode ID ${barcode} not found. SAMPLE BC:${barcode} NOT PROCESSED.`);
           process.exitCode = 8;
-          return (prefetch? 'NOT FOUND' : null);
+          return (prefetch? constants.PREFETCH_CODES.NOT_FOUND : null);
         }
         else if(res.data.data.length === 1){
           logger.info(`Got sample with barcode ${barcode}, statusCode: ${res.status}`);
@@ -265,7 +268,7 @@ async function getPatientSample(barcode, prefetch=false, retries=5){
         } else {
           logger.error(`More than one sample found with name ${barcode}. SAMPLE BC:${barcode} NOT PROCESSED.`);
           process.exitCode = 8;
-          return (prefetch? 'DUPLICATE' : null);
+          return (prefetch? constants.PREFETCH_CODES.DUPLICATE : null);
         }
       } else{
         if(retries > 0){
@@ -274,7 +277,7 @@ async function getPatientSample(barcode, prefetch=false, retries=5){
         } else {
           logger.error(res.data);
           process.exitCode = 8;
-          return (prefetch? 'ERROR' : null);
+          return (prefetch? constants.PREFETCH_CODES.ERROR : null);
         }
       }
     })
@@ -580,7 +583,7 @@ async function hamiltonTracking(csvRow, indMetas, poolMetas){
     return;
   }
 
-  if(!isValidLogSample(sampleObj, sampleBC)){
+  if(!isValidSampleType(sampleObj, sampleBC) || !isValidLogSample(sampleObj, sampleBC)){
     process.exitCode = 8;
     return;
   }
@@ -811,7 +814,7 @@ async function updateTestResult(csvRow, indMetas, poolMetas, failedWells, user, 
     return;
   }
 
-  if(!isValidLogSample(sampleObj, sampleBC)){
+  if(!isValidSampleType(sampleObj, sampleBC) || !isValidLogSample(sampleObj, sampleBC)){
     process.exitCode = 8;
     return;
   }
@@ -878,7 +881,7 @@ async function updateCTValues(csvRow, indMetas, poolMetas, allSampleCTs){
     return;
   }
 
-  if(!isValidLogSample(sampleObj, sampleBC)){
+  if(!isValidSampleType(sampleObj, sampleBC) || !isValidLogSample(sampleObj, sampleBC)){
     process.exitCode = 8;
     return;
   }
@@ -974,7 +977,8 @@ async function getElabID(csvRow){
   if (typeof sampleObj === 'string'){
     sampleID = sampleObj;
   } else {
-    sampleID = getSampleID(sampleObj)
+    // check that no children made it onto Gandalf
+    sampleID = isValidLogSample(sampleObj, sampleBC)? getSampleID(sampleObj) : constants.PREFETCH_CODES.INDIV_POOLED;
   }
 
   return Promise.resolve(sampleID);
